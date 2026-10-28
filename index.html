@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ruleta Física</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- p5.js 1.x (instance mode) and Matter.js, loaded as globals before the ES modules. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.1/p5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.20.0/matter.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">◉</span>
+        <span class="brand-name">Ruleta <b>Física</b></span>
+        <span class="tag">European · 0–36</span>
+      </div>
+      <div class="history-box">
+        <span class="label">Recent spins</span>
+        <div id="history" class="history"></div>
+      </div>
+      <div class="balance-box">
+        <span class="label">Balance</span>
+        <span id="balance" class="balance">COP $0</span>
+        <span id="sessionNet" class="net"></span>
+      </div>
+    </header>
+
+    <main class="main">
+      <div id="stage" class="stage"></div>
+
+      <aside class="panel">
+        <section class="card">
+          <h3>Selected bet</h3>
+          <div id="betName" class="bet-name">No bet selected</div>
+          <div id="betNumbers" class="bet-numbers"></div>
+          <dl class="kv">
+            <dt>Payout</dt><dd id="betPayout">—</dd>
+            <dt>Win probability</dt><dd id="betProb">—</dd>
+          </dl>
+        </section>
+
+        <section class="card">
+          <div class="stake-row">
+            <h3>Stake</h3>
+            <span id="stake" class="stake">COP $0</span>
+          </div>
+          <div id="chips" class="chips"></div>
+          <dl class="kv">
+            <dt>Potential return</dt><dd id="potential">—</dd>
+            <dt>Potential profit</dt><dd id="profit">—</dd>
+          </dl>
+        </section>
+
+        <section class="card actions">
+          <button id="btnPlace" class="btn btn-place" type="button">Place bet</button>
+          <button id="btnSpin" class="btn btn-spin" type="button">Spin</button>
+          <button id="btnRetire" class="btn btn-retire" type="button">Retire / Cash out</button>
+          <div id="status" class="status"></div>
+        </section>
+
+        <section id="resultCard" class="card result">
+          <h3>Last result</h3>
+          <div id="resultBody" class="result-body"></div>
+        </section>
+      </aside>
+    </main>
+
+    <div id="overlay" class="overlay hidden">
+      <div id="modal" class="modal"></div>
+    </div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
