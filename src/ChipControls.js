@@ -2,27 +2,26 @@ import { RULES } from './config.js';
 
 /**
  * Stake buttons: +10.000 +50.000 +100.000 +500.000 ½ Clear All in.
- * They only call MoneyManager; they never touch the balance.
+ * They only report the action; Game applies it to the active bet zone.
  */
 export default class ChipControls {
-  constructor(container, money, onChange) {
+  constructor(container, onAction) {
     this.container = container;
-    this.money = money;
-    this.onChange = onChange;
+    this.onAction = onAction; // (action: 'add'|'half'|'clear'|'allin', value?) => void
     this.buttons = [];
 
     const fmt = new Intl.NumberFormat('es-CO');
     const defs = [
-      ...RULES.chipValues.map((v) => ({ label: `+${fmt.format(v)}`, cls: `chip chip-${v}`, act: () => money.addChip(v) })),
-      { label: '½', cls: 'chip chip-op', act: () => money.halve(), title: 'Halve the stake' },
-      { label: 'Clear', cls: 'chip chip-op', act: () => money.clearStake() },
-      { label: 'All in', cls: 'chip chip-allin', act: () => money.allIn() }
+      ...RULES.chipValues.map((v) => ({ label: `+${fmt.format(v)}`, cls: `chip chip-${v}`, action: 'add', value: v })),
+      { label: '½', cls: 'chip chip-op', action: 'half', title: 'Halve the stake on the selected zone' },
+      { label: 'Clear', cls: 'chip chip-op', action: 'clear', title: 'Remove the chips from the selected zone' },
+      { label: 'All in', cls: 'chip chip-allin', action: 'allin', title: 'Put the rest of your balance on the selected zone' }
     ];
     this._onClick = (e) => {
       const btn = e.target.closest('button[data-idx]');
       if (!btn || btn.disabled) return;
-      defs[Number(btn.dataset.idx)].act();
-      if (this.onChange) this.onChange();
+      const d = defs[Number(btn.dataset.idx)];
+      if (this.onAction) this.onAction(d.action, d.value);
     };
     defs.forEach((d, i) => {
       const b = document.createElement('button');

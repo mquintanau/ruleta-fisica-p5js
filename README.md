@@ -21,8 +21,8 @@ first load needs an internet connection. Nothing needs installing.
 
 Tests (served the same way):
 
-- `http://localhost:8125/tests/`: 68 logic tests (formatting, chips, payouts, every table zone, the
-  state machine, stress formula, stats, card callback and failsafe).
+- `http://localhost:8125/tests/`: 86 logic tests (formatting, chips, the multi-bet slip, payouts,
+  every table zone, the state machine, stress formula, stats, card callback and failsafe).
 - `http://localhost:8125/tests/physics.html?n=300`: headless physics check. It runs N spins without
   rendering and reports settle times, fallbacks, whether the result always equals the pocket under the
   ball, and a chi-square uniformity check.
@@ -31,16 +31,26 @@ Tests (served the same way):
 
 1. **Start session**: you begin with **COP $1.750.905**.
 2. **Pick a zone on the felt.** Hovering highlights the zone and the numbers it covers, with a tooltip
-   showing the bet name, numbers, win probability and payout. Click to select it. Clicking the same
-   zone again deselects it, and clicking another zone replaces it. Only one bet per round.
-3. **Set the stake** with `+10.000` `+50.000` `+100.000` `+500.000` `½` `Clear` `All in`.
-   The stake is always an integer between 0 and your balance.
-4. **Place bet**: the stake is deducted once and the bet is locked. The TuLlave card taps the
-   terminal (≈0.9 s). While it plays, **Spin** is locked ("Processing payment…"), and you cannot retire
-   or get a refund.
-5. **Spin**: the rotor is spun and the ball is launched along the rim. When it settles, the result,
-   payout, net profit/loss and new balance are shown. The next round starts by itself after ~2.8 s.
-6. **Retire / Cash out**: retires immediately in READY. If pressed during a spin or a result, the
+   showing the bet name, numbers, win probability and payout. Clicking a zone adds it to **Your bets**
+   and makes it the *selected zone* (gold ring).
+3. **Set its stake** with `+10.000` `+50.000` `+100.000` `+500.000` `½` `Clear` `All in`. The
+   chip buttons always act on the selected zone.
+4. **Add more bets (optional).** Click another zone and give it its own stake. For example,
+   100.000 on Odd and 50.000 on Red. Up to 10 bets per spin.
+   - Click a zone that already has chips (on the felt or in the list) to edit it again.
+   - Click the selected zone again to deselect it (its chips stay).
+   - `×` removes a bet and **Clear all** empties the list. Zones left with no chips are dropped.
+   - Every stake is an integer, and the **total** never exceeds your balance: `All in` puts the rest
+     of your balance on the selected zone.
+   - The list shows the total stake, the best-case return and the chance that at least one bet pays.
+5. **Place bet**: the total of all bets is deducted once and the bets are locked. The TuLlave card
+   taps the terminal (≈0.9 s). While it plays, **Spin** is locked ("Processing payment…"), and you
+   cannot retire or get a refund.
+6. **Spin**: the rotor is spun and the ball is launched along the rim. When it settles, every bet is
+   settled on the same number. The result card lists each bet (✓/✗, stake → payout), then the total
+   stake, total payout, net profit/loss and new balance. The next round starts by itself after ~2.8 s
+   with an empty bet list.
+7. **Retire / Cash out**: retires immediately in READY. If pressed during a spin or a result, the
    cash-out happens right after the result is settled. If the balance reaches 0, the game ends
    (game over takes precedence over a pending cash-out). Both end screens show the session summary
    with **Play again** and **Main menu**.
@@ -79,10 +89,11 @@ One class per file (`src/`). Free functions and constants live in `src/utils/` a
 | `RouletteWheel.js` | Stator (rim backstop, brass diamonds) and kinematic rotor (37 frets + hub), pocket lookup, drawing |
 | `RouletteBall.js` | Ball body, force model, settle detection, fallbacks, pocket constraint |
 | `BettingSystem.js` | Bet catalogue, payouts, settlement (pure logic) |
-| `BettingTable.js` | Felt rendering, hover, hit detection (cells, edges, corners), selection, chip marker, tooltip |
-| `ChipControls.js` | Stake buttons |
-| `MoneyManager.js` | Balance and stake invariants, deduct and credit |
-| `SessionStats.js` | Spins, wins, losses, wagered, returned (each round recorded once) |
+| `BettingTable.js` | Felt rendering, hover, hit detection (cells, edges, corners), chip markers, tooltip; reports clicks |
+| `BetSlip.js` | The bets of the round being built: zones with their stakes, selected zone, chip operations, round outlook |
+| `ChipControls.js` | Stake buttons (emit actions, applied to the selected zone) |
+| `MoneyManager.js` | Balance invariants, deduct and credit |
+| `SessionStats.js` | Spins, winning and losing bets, wagered, returned (each round recorded once) |
 | `StressMeter.js` | Stress formula and gauge |
 | `ReactionCam.js` | Face cam: 5 images, crossfade, zoom, shake, overlays, fallback |
 | `TuLlaveCard.js` | Card and terminal animation, completion callback, failsafe |
@@ -143,9 +154,14 @@ hub. The result is read from where the ball actually comes to rest.
 
 ## Stress meter (fictional)
 
-`stress = 100 · (0.65·R + 0.35·L)`, with `R = stake / balance before the bet` and `L = 1 − covered/37`,
-clamped to 0–100. With no selection or a 0 stake, stress is 0. It updates when the selection or stake
-changes (hover does not change it). After Place bet it keeps using the pre-deduction balance until the
+`stress = 100 · (0.65·R + 0.35·L)`, clamped to 0–100, where:
+
+- `R = total stake / balance before the bet`
+- `L` is the probability that the round loses money: the share of the 37 numbers whose combined
+  payout is below the total stake. For a single bet this is `1 − covered/37`, as specified. With
+  several bets it reflects hedging: Red + Black with equal stakes only loses on 0, so `L = 1/37`.
+
+With no bets or a 0 stake, stress is 0. It updates when bets or stakes change (hover does not change it). After Place bet it keeps using the pre-deduction balance until the
 round resolves. Levels: 0–19 Normal, 20–39 Expectant, 40–59 Stressed, 60–79 Very stressed, 80–100
 Extreme nervousness. All in is always ≥ 83, so it is always Extreme. This is a game heuristic, not a
 medical measurement.

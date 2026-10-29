@@ -133,6 +133,38 @@ html, body {
 
 .stake-row { display: flex; align-items: baseline; justify-content: space-between; }
 .stake { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.sub-label { font-size: 12px; color: var(--muted); }
+.count { color: var(--gold-2); letter-spacing: 0; }
+.link-btn {
+  appearance: none; background: none; border: none; padding: 0; font: inherit; font-size: 12px;
+  color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+}
+.link-btn:hover:not(:disabled) { color: var(--text); }
+.link-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.bet-list { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 2px; }
+.bet-empty { font-size: 12px; color: var(--muted); padding: 4px 0; }
+.bet-row {
+  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px;
+  padding: 6px 8px; border-radius: 9px; border: 1px solid var(--edge); background: #0d1411;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.bet-row:hover { border-color: #33473d; }
+.bet-row.active { border-color: var(--gold); background: #1a1d12; }
+.bet-row.locked { cursor: default; }
+.bet-row.zero .bet-row-stake { color: var(--muted); }
+.bet-row-name { font-size: 13px; font-weight: 600; line-height: 1.2; }
+.bet-row-sub { font-size: 11px; color: var(--muted); }
+.bet-row-stake { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bet-remove {
+  appearance: none; border: none; background: transparent; color: var(--muted); font-size: 16px;
+  line-height: 1; cursor: pointer; padding: 0 2px;
+}
+.bet-remove:hover { color: var(--neg); }
+.result-bets { margin: 8px 0 0; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
+.result-bets div { display: flex; justify-content: space-between; gap: 8px; }
+.result-bets .won { color: var(--pos); }
+.result-bets .lost { color: var(--muted); }
 
 .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 8px 0 4px; }
 .chip {

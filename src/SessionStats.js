@@ -15,19 +15,19 @@ export default class SessionStats {
     this.resolvedRounds = new Set();
   }
 
-  /** Returns false (and changes nothing) if the round was already recorded. */
-  record(roundId, stake, returned) {
+  /**
+   * Records one resolved spin. `betsWon` / `betsLost` count individual bets
+   * (a spin can carry several). Returns false if the round was already recorded.
+   */
+  record(roundId, stake, returned, betsWon = returned > 0 ? 1 : 0, betsLost = returned > 0 ? 0 : 1) {
     if (this.resolvedRounds.has(roundId)) return false;
     this.resolvedRounds.add(roundId);
     this.spins++;
     this.totalWagered += stake;
     this.totalReturned += returned;
-    if (returned > 0) {
-      this.wins++;
-      this.biggestWin = Math.max(this.biggestWin, returned - stake);
-    } else {
-      this.losses++;
-    }
+    this.wins += betsWon;
+    this.losses += betsLost;
+    this.biggestWin = Math.max(this.biggestWin, returned - stake);
     return true;
   }
 

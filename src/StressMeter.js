@@ -1,6 +1,6 @@
 import { LAYOUT, COLORS } from './config.js';
 import { clamp, smoothing, drawPanel } from './utils/math.js';
-import { POCKETS } from './utils/rouletteData.js';
+import BetSlip from './BetSlip.js';
 
 export const STRESS_LEVELS = [
   { key: 'normal', label: 'Normal', min: 0, color: '#22c55e' },
@@ -12,8 +12,9 @@ export const STRESS_LEVELS = [
 
 /**
  * Fictional "cortisol" gauge (a game heuristic, not a medical measurement).
- *   R = S / B          (share of the pre-bet balance at risk)
- *   L = 1 − n / 37     (probability of losing the selected bet)
+ *   R = S / B          (share of the pre-bet balance at risk; S = total stake)
+ *   L = P(round loses)  (single bet: 1 − n / 37; several bets: share of the
+ *                        37 numbers on which the payout is below S)
  *   stress = 100 · (0.65 R + 0.35 L), clamped to [0, 100]
  */
 export default class StressMeter {
@@ -23,11 +24,13 @@ export default class StressMeter {
     this.display = 0;
   }
 
-  static compute(stake, referenceBalance, bet) {
-    if (!bet || !(stake > 0) || !(referenceBalance > 0)) return 0;
-    const R = stake / referenceBalance;
-    const L = 1 - bet.numbers.length / POCKETS;
-    return clamp(100 * (0.65 * R + 0.35 * L), 0, 100);
+  /** @param entries list of { bet, stake } */
+  static compute(entries, referenceBalance) {
+    const placed = (entries || []).filter((e) => e.stake > 0);
+    if (!placed.length || !(referenceBalance > 0)) return 0;
+    const { total, lossProbability } = BetSlip.outlook(placed);
+    const R = total / referenceBalance;
+    return clamp(100 * (0.65 * R + 0.35 * lossProbability), 0, 100);
   }
 
   /** Level of a score, using the same rounding as the number shown on the dial. */

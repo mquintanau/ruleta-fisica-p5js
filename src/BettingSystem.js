@@ -108,4 +108,9 @@ export default class BettingSystem {
   static totalReturn(bet, stake, number) {
     return BettingSystem.wins(bet, number) ? stake * (bet.payout + 1) : 0;
   }
+
+  /** Sum returned by a list of { bet, stake } entries when `number` comes up. */
+  static roundReturn(entries, number) {
+    return entries.reduce((sum, e) => sum + BettingSystem.totalReturn(e.bet, e.stake, number), 0);
+  }
 }

@@ -2,6 +2,7 @@
 import BettingSystem from '../src/BettingSystem.js';
 import BettingTable from '../src/BettingTable.js';
 import MoneyManager from '../src/MoneyManager.js';
+import BetSlip from '../src/BetSlip.js';
 import SessionStats from '../src/SessionStats.js';
 import GameState, { STATES as S } from '../src/GameState.js';
 import StressMeter from '../src/StressMeter.js';
@@ -25,21 +26,64 @@ check('formatCOP initial balance', formatCOP(1750905) === 'COP $1.750.905', form
 check('formatCOP zero', formatCOP(0) === 'COP $0');
 check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSignedCOP(-500) === '-COP $500');
 
+// ---------------------------------------------------------------- chips on the bet slip
+{
+  const B = RULES.initialBalance;
+  const slip = new BetSlip();
+  const odd = BettingSystem.evenMoney('odd');
+  const red = BettingSystem.evenMoney('red');
+  check('chips need an active zone', slip.addChip(10000, B) === false && slip.total === 0);
+  slip.select(odd);
+  slip.addChip(500000, B); slip.addChip(500000, B); slip.addChip(500000, B); slip.addChip(500000, B);
+  check('stake clamps to balance', slip.active.stake === 1750905, slip.active.stake);
+  slip.halve();
+  check('½ floors to an integer', slip.active.stake === 875452, slip.active.stake);
+  slip.clearActive(); slip.addChip(10000, B); slip.halve(); slip.halve();
+  check('½ keeps integers', slip.active.stake === 2500);
+  slip.active.stake = 1; slip.halve();
+  check('½ below 1 becomes 0', slip.active.stake === 0);
+  slip.allIn(B);
+  check('All in = balance', slip.active.stake === B);
+  slip.clearActive();
+  check('Clear resets the zone to 0', slip.active.stake === 0);
+
+  // two bets with different amounts: Odd and Red
+  slip.addChip(100000, B);
+  check('select another zone keeps the first bet', slip.select(red) === 'added' && slip.list.length === 2 && slip.activeKey === red.key);
+  slip.addChip(50000, B);
+  check('each zone has its own stake', slip.entries.get(odd.key).stake === 100000 && slip.entries.get(red.key).stake === 50000 && slip.total === 150000);
+  slip.allIn(B);
+  check('All in only adds the remaining balance', slip.entries.get(red.key).stake === B - 100000 && slip.total === B);
+  slip.addChip(500000, B);
+  check('total never exceeds the balance', slip.total === B);
+  slip.clearActive(); slip.addChip(50000, B);
+  check('clicking a zone with chips re-activates it', slip.select(odd) === 'activated' && slip.activeKey === odd.key);
+  check('clicking the active zone deactivates it (chips stay)', slip.select(odd) === 'deactivated' && slip.activeKey === null && slip.list.length === 2);
+  const straight = BettingSystem.create('straight', [9]);
+  slip.select(straight);
+  slip.select(BettingSystem.create('straight', [10]));
+  check('zones left without chips are dropped', !slip.entries.has(straight.key) && slip.list.length === 3);
+  check('committed() only keeps bets with chips', slip.committed().length === 2);
+  slip.remove(odd.key);
+  check('remove a bet', !slip.entries.has(odd.key) && slip.total === 50000);
+  const full = new BetSlip();
+  for (let n = 1; n <= 10; n++) { full.select(BettingSystem.create('straight', [n])); full.addChip(10000, B); }
+  check('at most 10 bets per spin', full.select(BettingSystem.create('straight', [11])) === 'full' && full.committed().length === 10);
+
+  // settlement of several bets on one number
+  const both = [{ bet: odd, stake: 100000 }, { bet: red, stake: 50000 }];
+  check('Odd + Red, 7 (odd, red): both pay', BettingSystem.roundReturn(both, 7) === 300000);
+  check('Odd + Red, 9 (odd, red): both pay', BettingSystem.roundReturn(both, 9) === 300000);
+  check('Odd + Red, 11 (odd, black): only odd pays', BettingSystem.roundReturn(both, 11) === 200000);
+  check('Odd + Red, 12 (even, red): only red pays', BettingSystem.roundReturn(both, 12) === 100000);
+  check('Odd + Red, 0: nothing pays', BettingSystem.roundReturn(both, 0) === 0);
+  const o = BetSlip.outlook(both);
+  check('outlook: best return / payout chance', o.bestReturn === 300000 && Math.abs(o.payoutProbability - 26 / 37) < 1e-12, JSON.stringify(o));
+}
+
 // ---------------------------------------------------------------- money
 {
   const m = new MoneyManager(RULES.initialBalance);
-  m.addChip(500000); m.addChip(500000); m.addChip(500000); m.addChip(500000);
-  check('stake clamps to balance', m.stake === 1750905, m.stake);
-  m.halve();
-  check('½ floors to an integer', m.stake === 875452, m.stake);
-  m.clearStake(); m.addChip(10000); m.halve(); m.halve();
-  check('½ keeps integers', m.stake === 2500);
-  m.stake = 1; m.halve();
-  check('½ below 1 becomes 0', m.stake === 0);
-  m.allIn();
-  check('All in = balance', m.stake === m.balance);
-  m.clearStake();
-  check('Clear resets to 0', m.stake === 0);
   check('canAfford rejects 0 / negative / above balance / fractions',
     !m.canAfford(0) && !m.canAfford(-5) && !m.canAfford(m.balance + 1) && !m.canAfford(10.5) && m.canAfford(m.balance));
   m.deduct(750905);
@@ -103,21 +147,15 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   check('outside the felt → null', hit(5, 5) === null && hit(gx0 + 3 * W, dozenY1 + T.outsideH + 30) === null);
   const c1 = hit(gx0 + 2, gy0 + 1.5 * H);
   check('probability = covered / 37', Math.abs(c1.probability - 2 / 37) < 1e-12);
-  // selection replace / toggle (pointer mapping stubbed to fixed logical points)
-  t.selection = null;
+  // clicks are reported to the owner (pointer mapping stubbed to fixed logical points)
+  const clicked = [];
+  t.onZoneClick = (b) => clicked.push(b.key);
   t._toLogical = () => ({ x: gx0 + W / 2, y: gy0 + H / 2 });
   t._handleDown({ button: 0 });
-  const first = t.selection && t.selection.key;
-  t._handleDown({ button: 0 });
-  check('clicking the same zone again deselects', first === 'straight:3' && t.selection === null);
-  t._handleDown({ button: 0 });
-  t._toLogical = () => ({ x: gx0 + 1.5 * W, y: gy0 + H / 2 });
-  t._handleDown({ button: 0 });
-  check('clicking another zone replaces the selection', t.selection && t.selection.key === 'straight:6');
+  check('click reports the zone under the pointer', clicked.join() === 'straight:3');
   t.setEnabled(false);
-  t._toLogical = () => ({ x: gx0 + 2.5 * W, y: gy0 + H / 2 });
   t._handleDown({ button: 0 });
-  check('disabled table ignores clicks', t.selection.key === 'straight:6');
+  check('disabled table ignores clicks', clicked.length === 1);
   t.destroy();
 }
 
@@ -148,12 +186,17 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
 {
   const straight = BettingSystem.create('straight', [7]);
   const red = BettingSystem.evenMoney('red');
-  check('no selection or zero stake → 0', StressMeter.compute(0, 1000, straight) === 0 && StressMeter.compute(100, 1000, null) === 0);
-  const small = StressMeter.compute(10000, RULES.initialBalance, straight);
+  const one = (bet, stake) => [{ bet, stake }];
+  check('no selection or zero stake → 0', StressMeter.compute(one(straight, 0), 1000) === 0 && StressMeter.compute([], 1000) === 0);
+  const small = StressMeter.compute(one(straight, 10000), RULES.initialBalance);
   check('small straight bet → Expectant (odds drive it)', StressMeter.levelOf(small) === 1, small.toFixed(1));
-  const allInRed = StressMeter.compute(RULES.initialBalance, RULES.initialBalance, red);
+  const allInRed = StressMeter.compute(one(red, RULES.initialBalance), RULES.initialBalance);
   check('All in on red → Extreme', StressMeter.levelOf(allInRed) === 4, allInRed.toFixed(1));
-  check('formula 100·(0.65R + 0.35L)', Math.abs(StressMeter.compute(500, 1000, red) - 100 * (0.65 * 0.5 + 0.35 * (19 / 37))) < 1e-9);
+  check('formula 100·(0.65R + 0.35L)', Math.abs(StressMeter.compute(one(red, 500), 1000) - 100 * (0.65 * 0.5 + 0.35 * (19 / 37))) < 1e-9);
+  // Red + Black hedge: only 0 loses, so L = 1/37 even with a big total stake.
+  const hedge = [{ bet: red, stake: 250 }, { bet: BettingSystem.evenMoney('black'), stake: 250 }];
+  check('several bets: R uses the total, L the chance the round loses',
+    Math.abs(StressMeter.compute(hedge, 1000) - 100 * (0.65 * 0.5 + 0.35 * (1 / 37))) < 1e-9);
   check('thresholds 0-19 / 20-39 / 40-59 / 60-79 / 80-100', [0, 19.4, 20, 39, 40, 59.4, 60, 79.4, 80, 100].map(StressMeter.levelOf).join('') === '0011223344');
 }
 
@@ -165,6 +208,8 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   s.record(2, 100, 3600);
   const sum = s.summary(4400);
   check('stats count each round once', sum.spins === 2 && sum.losses === 1 && sum.wins === 1 && sum.totalWagered === 200 && sum.totalReturned === 3600 && sum.net === 3400);
+  s.record(3, 150, 200, 1, 1);
+  check('stats count individual bets of a multi-bet spin', s.spins === 3 && s.wins === 2 && s.losses === 2);
 }
 
 // ---------------------------------------------------------------- TuLlave card (async)

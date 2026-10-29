@@ -36,24 +36,26 @@
 
       <aside class="panel">
         <section class="card">
-          <h3>Selected bet</h3>
-          <div id="betName" class="bet-name">No bet selected</div>
+          <h3>Selected zone</h3>
+          <div id="betName" class="bet-name">No zone selected</div>
           <div id="betNumbers" class="bet-numbers"></div>
-          <dl class="kv">
-            <dt>Payout</dt><dd id="betPayout">—</dd>
-            <dt>Win probability</dt><dd id="betProb">—</dd>
-          </dl>
+          <div class="stake-row">
+            <span class="sub-label">Stake on this zone</span>
+            <span id="stake" class="stake">COP $0</span>
+          </div>
+          <div id="chips" class="chips"></div>
         </section>
 
         <section class="card">
           <div class="stake-row">
-            <h3>Stake</h3>
-            <span id="stake" class="stake">COP $0</span>
+            <h3>Your bets <span id="betCount" class="count"></span></h3>
+            <button id="btnClearBets" class="link-btn" type="button">Clear all</button>
           </div>
-          <div id="chips" class="chips"></div>
+          <div id="betList" class="bet-list"></div>
           <dl class="kv">
-            <dt>Potential return</dt><dd id="potential">—</dd>
-            <dt>Potential profit</dt><dd id="profit">—</dd>
+            <dt>Total stake</dt><dd id="totalStake">—</dd>
+            <dt>Best-case return</dt><dd id="bestReturn">—</dd>
+            <dt>Chance of a payout</dt><dd id="payoutProb">—</dd>
           </dl>
         </section>
 

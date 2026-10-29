@@ -5,6 +5,7 @@ import RouletteWheel from './RouletteWheel.js';
 import RouletteBall from './RouletteBall.js';
 import BettingSystem from './BettingSystem.js';
 import BettingTable from './BettingTable.js';
+import BetSlip, { MAX_BETS } from './BetSlip.js';
 import ChipControls from './ChipControls.js';
 import MoneyManager from './MoneyManager.js';
 import SessionStats from './SessionStats.js';
@@ -32,8 +33,9 @@ export default class Game {
     this.stress = new StressMeter(p);
     this.cam = new ReactionCam(p);
     this.card = new TuLlaveCard(p);
+    this.slip = new BetSlip();
     this.table = new BettingTable(p, canvasEl);
-    this.table.onSelectionChange = () => this._onBetInputsChanged();
+    this.table.onZoneClick = (bet) => this.onZoneClick(bet);
 
     this.ui = new UIManager({
       onPlace: () => this.placeBet(),
@@ -41,9 +43,12 @@ export default class Game {
       onRetire: () => this.retire(),
       onStart: () => this.newSession(),
       onPlayAgain: () => this.newSession(),
-      onMainMenu: () => this.mainMenu()
+      onMainMenu: () => this.mainMenu(),
+      onSelectBet: (key) => this._editSlip(() => this.slip.setActive(key)),
+      onRemoveBet: (key) => this._editSlip(() => this.slip.remove(key)),
+      onClearBets: () => this._editSlip(() => this.slip.clearAll())
     });
-    this.chips = new ChipControls(this.ui.el.chips, this.money, () => this._onBetInputsChanged());
+    this.chips = new ChipControls(this.ui.el.chips, (action, value) => this.onChip(action, value));
 
     this.sessionId = 0;
     this.roundSeq = 0;
@@ -92,6 +97,7 @@ export default class Game {
     this._clearTimers();
     this.card.reset();
     this.money.reset();
+    this.slip.reset();
     this.stats.reset();
     this.history = [];
     this.round = null;
@@ -114,23 +120,46 @@ export default class Game {
 
   // ------------------------------------------------------------ actions
 
-  _onBetInputsChanged() {
+  /** Bet-slip edits are only allowed while READY. */
+  _editSlip(fn) {
     if (!this.state.is(S.READY)) return;
+    fn();
+    this._sync();
+  }
+
+  onZoneClick(bet) {
+    this._editSlip(() => {
+      if (this.slip.select(bet) === 'full') this.ui.toast(`Maximum ${MAX_BETS} bets per spin.`);
+    });
+  }
+
+  onChip(action, value) {
+    if (!this.state.is(S.READY)) return;
+    if (!this.slip.active) {
+      this.ui.toast('Select a zone on the table first, then add chips to it.');
+      return;
+    }
+    const balance = this.money.balance;
+    if (action === 'add') this.slip.addChip(value, balance);
+    else if (action === 'half') this.slip.halve();
+    else if (action === 'clear') this.slip.clearActive();
+    else if (action === 'allin') this.slip.allIn(balance);
     this._sync();
   }
 
   placeBet() {
     if (!this.state.is(S.READY)) return;
-    const bet = this.table.selection;
-    const stake = this.money.stake;
-    if (!bet) return this.ui.toast('Select a zone on the table first.');
-    if (!(stake > 0)) return this.ui.toast('Add chips: the stake must be greater than 0.');
-    if (!this.money.canAfford(stake)) return this.ui.toast('The stake exceeds your balance.');
+    const bets = this.slip.committed();
+    const stake = bets.reduce((s, e) => s + e.stake, 0);
+    if (!this.slip.list.length) return this.ui.toast('Select a zone on the table first.');
+    if (!bets.length) return this.ui.toast('Add chips: the stake must be greater than 0.');
+    if (!this.money.canAfford(stake)) return this.ui.toast('The total stake exceeds your balance.');
 
-    // Atomic: validate → deduct once → lock the round → state change.
+    // Atomic: validate → deduct once (all bets together) → lock the round → state change.
     const refBalance = this.money.balance;
     this.money.deduct(stake);
-    this.round = { id: ++this.roundSeq, bet, stake, refBalance, resolved: false };
+    this.round = { id: ++this.roundSeq, bets, stake, refBalance, resolved: false };
+    this.slip.reset();
     this.state.transition(S.BET_PLACED);
     this.table.setEnabled(false);
     this.chips.setEnabled(false);
@@ -175,25 +204,29 @@ export default class Game {
     const r = this.round;
     r.resolved = true;
     const number = WHEEL_ORDER[pocketIndex];
-    const returned = BettingSystem.totalReturn(r.bet, r.stake, number);
+    const bets = r.bets.map((e) => ({ ...e, returned: BettingSystem.totalReturn(e.bet, e.stake, number) }));
+    const returned = bets.reduce((s, e) => s + e.returned, 0);
+    const betsWon = bets.filter((e) => e.returned > 0).length;
     if (returned > 0) this.money.credit(returned);
-    this.stats.record(r.id, r.stake, returned);
+    this.stats.record(r.id, r.stake, returned, betsWon, bets.length - betsWon);
     this.history.unshift(number);
     if (this.history.length > 14) this.history.length = 14;
     this.lastResult = {
       number,
-      bet: r.bet,
+      bets,
       stake: r.stake,
       returned,
       net: returned - r.stake,
       balance: this.money.balance,
-      win: returned > 0
+      win: returned > r.stake
     };
     this.wheel.highlightIndex = pocketIndex;
     this.table.lastWinning = number;
     this.state.transition(S.RESULT);
-    if (returned > 0) this.cam.flash(`WIN ${formatSignedCOP(returned - r.stake)}`, '#4ade80');
-    else this.cam.flash(`LOST ${formatCOP(r.stake)}`, '#f87171');
+    const net = returned - r.stake;
+    if (net > 0) this.cam.flash(`WIN ${formatSignedCOP(net)}`, '#4ade80');
+    else if (net === 0) this.cam.flash('BREAK EVEN', '#fcd34d');
+    else this.cam.flash(`LOST ${formatCOP(-net)}`, '#f87171');
     this._later(() => this._afterResult(), RULES.resultDisplayMs);
     this._sync();
   }
@@ -210,8 +243,7 @@ export default class Game {
       this.ui.showSummary('retired', this.stats.summary(this.money.balance));
     } else {
       this.state.transition(S.READY);
-      this.table.clearSelection();
-      this.money.clearStake();
+      this.slip.reset();
       this.table.setEnabled(true);
       this.chips.setEnabled(true);
       this.card.status = 'idle';
@@ -251,10 +283,10 @@ export default class Game {
 
   _stressValue() {
     if (this.round && this.state.is(S.BET_PLACED, S.SPINNING, S.RESULT)) {
-      return StressMeter.compute(this.round.stake, this.round.refBalance, this.round.bet);
+      return StressMeter.compute(this.round.bets, this.round.refBalance);
     }
     if (this.state.is(S.READY)) {
-      return StressMeter.compute(this.money.stake, this.money.balance, this.table.selection);
+      return StressMeter.compute(this.slip.list, this.money.balance);
     }
     return 0;
   }
@@ -267,8 +299,9 @@ export default class Game {
       retirePending: this.state.retirePending,
       balance: this.money.balance,
       pendingStake: inRound ? this.round.stake : 0,
-      stake: this.round ? this.round.stake : this.money.stake,
-      bet: this.round ? this.round.bet : this.table.selection,
+      bets: this.round ? this.round.bets : this.slip.list,
+      activeKey: this.round ? null : this.slip.activeKey,
+      editable: this.state.is(S.READY),
       lastResult: this.lastResult,
       history: this.history
     };
@@ -310,7 +343,8 @@ export default class Game {
     this.cam.draw();
     this.stress.draw();
     this.card.draw();
-    this.table.draw(this.round ? this.round.stake : this.money.stake);
+    if (this.round) this.table.draw(this.round.bets, null);
+    else this.table.draw(this.slip.list, this.slip.activeKey);
   }
 
   _drawWheelInfo() {

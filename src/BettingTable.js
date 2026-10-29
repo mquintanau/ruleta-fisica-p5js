@@ -21,10 +21,9 @@ export default class BettingTable {
     this.canvasEl = canvasEl;
     this.enabled = true;
     this.hover = null;
-    this.selection = null;
     this.mouse = { x: -1, y: -1, inside: false };
     this.lastWinning = null;
-    this.onSelectionChange = null; // (bet|null) => void
+    this.onZoneClick = null; // (bet) => void — the BetSlip owns what is selected
 
     const gx0 = T.x0 + T.zeroW;
     const gy0 = T.y0;
@@ -52,11 +51,10 @@ export default class BettingTable {
     this.canvasEl.removeEventListener('pointermove', this._onMove);
     this.canvasEl.removeEventListener('pointerleave', this._onLeave);
     this.canvasEl.removeEventListener('pointerdown', this._onDown);
-    this.onSelectionChange = null;
+    this.onZoneClick = null;
   }
 
   reset() {
-    this.selection = null;
     this.hover = null;
     this.lastWinning = null;
     this.enabled = true;
@@ -65,10 +63,6 @@ export default class BettingTable {
   setEnabled(on) {
     this.enabled = on;
     if (!on) this.hover = null;
-  }
-
-  clearSelection() {
-    this.selection = null;
   }
 
   // ------------------------------------------------------------ geometry
@@ -223,15 +217,16 @@ export default class BettingTable {
     if (!this.enabled || e.button !== 0) return;
     const { x, y } = this._toLogical(e);
     const bet = this.hitTest(x, y);
-    if (!bet) return;
-    // Clicking the same zone again deselects; any other zone replaces it.
-    this.selection = this.selection && this.selection.key === bet.key ? null : bet;
-    if (this.onSelectionChange) this.onSelectionChange(this.selection);
+    if (bet && this.onZoneClick) this.onZoneClick(bet);
   }
 
   // ------------------------------------------------------------ drawing
 
-  draw(stake) {
+  /**
+   * @param entries  list of { bet, stake } to show as chips
+   * @param activeKey key of the zone the chip buttons act on (or null)
+   */
+  draw(entries = [], activeKey = null) {
     const p = this.p;
     const P = T.panel;
     drawPanel(p, P.x, P.y, P.w, P.h);
@@ -327,13 +322,16 @@ export default class BettingTable {
       p.rect(r.x + 2, r.y + 2, r.w - 4, r.h - 4, 6);
     }
 
-    if (this.selection) this._drawCoverage(this.selection, [217, 180, 91], 60);
-    if (this.hover && (!this.selection || this.hover.key !== this.selection.key)) {
+    const active = entries.find((e) => e.bet.key === activeKey) || null;
+    if (active) this._drawCoverage(active.bet, [217, 180, 91], 60);
+    if (this.hover && (!active || this.hover.key !== active.bet.key)) {
       this._drawCoverage(this.hover, [255, 240, 170], 75);
     }
-    if (this.selection) this._drawZone(this.selection, [217, 180, 91]);
+    if (active) this._drawZone(active.bet, [217, 180, 91]);
     if (this.hover) this._drawZone(this.hover, [255, 240, 170]);
-    if (this.selection) this._drawChip(this.selection.anchor, stake);
+    // Chips: the other bets first (smaller), the active zone on top.
+    for (const e of entries) if (e !== active) this._drawChip(e.bet.anchor, e.stake, 0.82);
+    if (active) this._drawChip(active.bet.anchor, active.stake, 1, true);
 
     if (!this.enabled) {
       p.noStroke();
@@ -377,12 +375,19 @@ export default class BettingTable {
     }
   }
 
-  _drawChip(at, stake) {
+  _drawChip(at, stake, scale = 1, active = false) {
     const p = this.p;
     const v = stake || 0;
     const col = v >= 500000 ? '#6d28d9' : v >= 100000 ? '#111111' : v >= 50000 ? '#c2410c' : v > 0 ? '#1d4ed8' : '#4b5563';
     p.push();
     p.translate(at.x, at.y);
+    p.scale(scale);
+    if (active) {
+      p.noFill();
+      p.stroke(255, 224, 138, 200 + 55 * Math.sin(p.millis() / 200));
+      p.strokeWeight(2.5);
+      p.circle(0, 0, 44);
+    }
     p.noStroke();
     p.fill(0, 0, 0, 110);
     p.circle(2, 3, 36);
