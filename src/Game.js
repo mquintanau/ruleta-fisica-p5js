@@ -336,7 +336,7 @@ export default class Game {
     const p = this.p;
     p.background(COLORS.bg);
     const W = LAYOUT.wheel.panel;
-    drawPanel(p, W.x, W.y, W.w, W.h, 'European wheel');
+    drawPanel(p, W.x, W.y, W.w, W.h);
     this.wheel.draw();
     this.ball.draw();
     this._drawWheelInfo();
@@ -371,7 +371,7 @@ export default class Game {
       p.textStyle(p.NORMAL);
     }
     // Bottom caption
-    let caption = 'Place a bet to play';
+    let caption = '';
     if (this.state.is(S.BET_PLACED)) caption = this.state.spinUnlocked ? 'Ready — press Spin' : 'Waiting for payment…';
     if (this.state.is(S.SPINNING)) caption = `Ball rolling · ${this.ball.elapsed.toFixed(1)} s`;
     if (this.state.is(S.RESULT) && this.lastResult) caption = `Ball settled in ${this.lastResult.number}`;
@@ -380,8 +380,5 @@ export default class Game {
     p.textSize(11);
     p.textAlign(p.RIGHT, p.BOTTOM);
     p.text(caption, W.x + W.w - 14, W.y + W.h - 10);
-    p.textAlign(p.LEFT, p.BOTTOM);
-    p.textSize(9.5);
-    p.text('ball: Matter.js rigid body', W.x + 14, W.y + W.h - 10);
   }
 }

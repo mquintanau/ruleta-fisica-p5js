@@ -61,6 +61,7 @@ export default class BettingTable {
   }
 
   setEnabled(on) {
+    if (!on && this.enabled) this.lastWinning = null;
     this.enabled = on;
     if (!on) this.hover = null;
   }
@@ -334,9 +335,34 @@ export default class BettingTable {
     if (active) this._drawChip(active.bet.anchor, active.stake, 1, true);
 
     if (!this.enabled) {
-      p.noStroke();
-      p.fill(0, 0, 0, 80);
-      p.rect(T.x0 - 14, gy0 - 10, colX1 - T.x0 + 28, outY1 - gy0 + 20, 10);
+      const ctx = p.drawingContext;
+      const fx = T.x0 - 14;
+      const fy = gy0 - 10;
+      const fw = colX1 - T.x0 + 28;
+      const fh = outY1 - gy0 + 20;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(fx, fy, fw, fh, 10);
+
+      if (this.lastWinning !== null) {
+        const r = this.rectOf(this.lastWinning);
+        if (this.lastWinning === 0) {
+          ctx.moveTo(r.x + 16, r.y);
+          ctx.lineTo(r.x + r.w, r.y);
+          ctx.lineTo(r.x + r.w, r.y + r.h);
+          ctx.lineTo(r.x + 16, r.y + r.h);
+          ctx.lineTo(r.x, r.y + r.h / 2);
+          ctx.closePath();
+        } else {
+          ctx.rect(r.x, r.y, r.w, r.h);
+        }
+      }
+
+      ctx.clip('evenodd');
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.60)';
+      ctx.fillRect(fx, fy, fw, fh);
+      ctx.restore();
     }
     if (this.hover && this.mouse.inside) this._drawTooltip(this.hover);
     p.textStyle(p.NORMAL);

@@ -159,15 +159,6 @@ export default class ReactionCam {
     p.fill(255);
     p.text(this.chatLine, C.x + 66, C.y + C.h - 13);
 
-    p.textAlign(p.RIGHT, p.CENTER);
-    p.fill(0, 0, 0, 140);
-    const lbl = STRESS_LEVELS[this.level].label;
-    p.textSize(10);
-    const lw = p.textWidth(lbl) + 14;
-    p.rect(C.x + C.w - lw - 10, C.y + 10, lw, 18, 4);
-    p.fill(STRESS_LEVELS[this.level].color);
-    p.text(lbl, C.x + C.w - 17, C.y + 19.5);
-
     if (this.banner && p.millis() < this.banner.until) {
       const left = (this.banner.until - p.millis()) / 1000;
       const a = Math.min(1, left / 0.4);

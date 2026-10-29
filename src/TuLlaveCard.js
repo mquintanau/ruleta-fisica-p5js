@@ -137,7 +137,7 @@ export default class TuLlaveCard {
   draw() {
     const p = this.p;
     const P = LAYOUT.card;
-    drawPanel(p, P.x, P.y, P.w, P.h, 'Pago TuLlave');
+    drawPanel(p, P.x, P.y, P.w, P.h);
     const now = p.millis();
     const since = now - this.approvedAt;
     const approvedGlow = since < 700;
@@ -158,7 +158,7 @@ export default class TuLlaveCard {
     p.textAlign(p.CENTER, p.CENTER);
     p.textStyle(p.BOLD);
     p.textSize(11);
-    let screenText = 'Acerque tarjeta';
+    let screenText = 'Acerque la tarjeta';
     let screenColor = '#93c5fd';
     if (this.playing && this.t < 0.42) { screenText = 'Leyendo…'; screenColor = '#fcd34d'; }
     else if (approvedGlow || this.status === 'ready') { screenText = '✓ Aprobado'; screenColor = '#86efac'; }

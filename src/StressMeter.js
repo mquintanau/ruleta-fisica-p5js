@@ -71,7 +71,7 @@ export default class StressMeter {
   draw() {
     const p = this.p;
     const G = LAYOUT.gauge;
-    drawPanel(p, G.x, G.y, G.w, G.h, 'Cortisol-o-meter');
+    drawPanel(p, G.x, G.y, G.w, G.h, 'Cortisol meter');
     const cx = G.x + G.w / 2;
     const cy = G.y + 146;
     const R = 92;
@@ -130,9 +130,5 @@ export default class StressMeter {
     p.textSize(12);
     p.fill(COLORS.text);
     p.text(STRESS_LEVELS[lvl].label, cx, cy + 54);
-    p.textStyle(p.NORMAL);
-    p.fill(COLORS.muted);
-    p.textSize(9);
-    p.text('fictional game indicator · not a medical value', cx, G.y + G.h - 12);
   }
 }

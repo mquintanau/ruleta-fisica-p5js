@@ -236,17 +236,14 @@ export default class UIManager {
   showMenu() {
     this.el.modal.innerHTML = `
       <div class="modal-logo">◉</div>
-      <h1>Ruleta <span>Física</span></h1>
-      <p class="lead">European roulette with a Matter.js ball, a live reaction cam and a fictional cortisol meter.</p>
+      <h1><span>Coljugos</span> Roulette</h1>
       <ul class="how">
-        <li>Click the felt: <b>cell</b> = straight, <b>line</b> = split / street, <b>corner</b> = corner / six line.</li>
         <li>Pick a zone and add chips to it. Pick more zones to bet on several at once (e.g. Odd and Red).</li>
         <li><b>Place bet</b> pays for all your bets with your TuLlave.</li>
         <li><b>Spin</b> unlocks when the payment is approved. Cash out any time between rounds.</li>
       </ul>
       <div class="start-balance">Starting balance <b>${formatCOP(RULES.initialBalance)}</b></div>
-      <button class="btn btn-spin big" data-action="start">Start session</button>
-      <p class="fine">Simulated in-game currency only. No real money involved.</p>`;
+      <button class="btn btn-spin big" data-action="start">Start session</button>`;
     this.el.overlay.classList.remove('hidden');
   }
 
