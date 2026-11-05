@@ -19,11 +19,6 @@ import { drawPanel } from './utils/math.js';
 
 const S = STATES;
 
-/**
- * Orchestrates one browser page: owns the models, the physics world of the
- * current session and the round lifecycle
- *   READY → BET_PLACED → SPINNING → RESULT → READY | RETIRED | GAME_OVER
- */
 export default class Game {
   constructor(p, canvasEl) {
     this.p = p;
@@ -65,8 +60,6 @@ export default class Game {
     this._sync();
   }
 
-  // ------------------------------------------------------------ lifecycle
-
   _buildPhysics() {
     if (this.ball) this.ball.destroy();
     if (this.wheel) this.wheel.destroy();
@@ -90,7 +83,6 @@ export default class Game {
     this.timers.clear();
   }
 
-  /** Fresh session: balance, counters, physics world, timers and UI are reset. */
   newSession() {
     if (!this.state.is(S.MENU, S.RETIRED, S.GAME_OVER)) return;
     this.sessionId++;
@@ -118,9 +110,6 @@ export default class Game {
     this._sync();
   }
 
-  // ------------------------------------------------------------ actions
-
-  /** Bet-slip edits are only allowed while READY. */
   _editSlip(fn) {
     if (!this.state.is(S.READY)) return;
     fn();
@@ -155,7 +144,6 @@ export default class Game {
     if (!bets.length) return this.ui.toast('Add chips: the stake must be greater than 0.');
     if (!this.money.canAfford(stake)) return this.ui.toast('The total stake exceeds your balance.');
 
-    // Atomic: validate → deduct once (all bets together) → lock the round → state change.
     const refBalance = this.money.balance;
     this.money.deduct(stake);
     this.round = { id: ++this.roundSeq, bets, stake, refBalance, resolved: false };
@@ -172,7 +160,6 @@ export default class Game {
   }
 
   _onPaymentApproved(roundId, sessionId) {
-    // Ignore stale callbacks from an earlier round or session.
     if (sessionId !== this.sessionId || !this.round || this.round.id !== roundId) return;
     if (this.state.unlockSpin()) {
       this.card.status = 'ready';
@@ -235,7 +222,6 @@ export default class Game {
     if (!this.state.is(S.RESULT)) return;
     this.round = null;
     if (this.money.balance <= 0) {
-      // Game over takes precedence over a pending retirement.
       this.state.transition(S.GAME_OVER);
       this.ui.showSummary('gameover', this.stats.summary(this.money.balance));
     } else if (this.state.retirePending) {
@@ -260,14 +246,12 @@ export default class Game {
       this.state.retirePending = true;
       this.ui.toast('You will cash out as soon as this spin is settled.');
     } else if (this.state.is(S.BET_PLACED)) {
-      // The bet is committed: no refunds and no retiring before the spin.
       this.ui.toast('Your bet is placed — you must spin first.');
       return;
     }
     this._sync();
   }
 
-  /** Tear everything down (listeners, timers, physics). Used on page unload. */
   destroy() {
     this._clearTimers();
     this.card.reset();
@@ -278,8 +262,6 @@ export default class Game {
     this.wheel.destroy();
     this.physics.destroy();
   }
-
-  // ------------------------------------------------------------ derived
 
   _stressValue() {
     if (this.round && this.state.is(S.BET_PLACED, S.SPINNING, S.RESULT)) {
@@ -315,8 +297,6 @@ export default class Game {
     this.ui.render(this.snapshot());
   }
 
-  // ------------------------------------------------------------ frame
-
   update(dtMs) {
     const dt = Math.min(dtMs, 100) / 1000;
     this.physics.update(dtMs);
@@ -351,7 +331,7 @@ export default class Game {
     const p = this.p;
     const W = LAYOUT.wheel.panel;
     const { cx, cy } = LAYOUT.wheel;
-    // Winning number disc in the middle of the hub (does not rotate).
+
     if (this.lastResult && this.wheel.highlightIndex >= 0) {
       const n = this.lastResult.number;
       const col = { red: COLORS.red, black: '#111', green: COLORS.green }[colorOf(n)];
@@ -370,7 +350,7 @@ export default class Game {
       p.text(n, cx, cy + 1);
       p.textStyle(p.NORMAL);
     }
-    // Bottom caption
+
     let caption = '';
     if (this.state.is(S.BET_PLACED)) caption = this.state.spinUnlocked ? 'Ready — press Spin' : 'Waiting for payment…';
     if (this.state.is(S.SPINNING)) caption = `Ball rolling · ${this.ball.elapsed.toFixed(1)} s`;

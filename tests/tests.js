@@ -21,12 +21,10 @@ function check(name, cond, detail = '') {
 }
 const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
-// ---------------------------------------------------------------- format
 check('formatCOP initial balance', formatCOP(1750905) === 'COP $1.750.905', formatCOP(1750905));
 check('formatCOP zero', formatCOP(0) === 'COP $0');
 check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSignedCOP(-500) === '-COP $500');
 
-// ---------------------------------------------------------------- chips on the bet slip
 {
   const B = RULES.initialBalance;
   const slip = new BetSlip();
@@ -47,7 +45,6 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   slip.clearActive();
   check('Clear resets the zone to 0', slip.active.stake === 0);
 
-  // two bets with different amounts: Odd and Red
   slip.addChip(100000, B);
   check('select another zone keeps the first bet', slip.select(red) === 'added' && slip.list.length === 2 && slip.activeKey === red.key);
   slip.addChip(50000, B);
@@ -70,7 +67,6 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   for (let n = 1; n <= 10; n++) { full.select(BettingSystem.create('straight', [n])); full.addChip(10000, B); }
   check('at most 10 bets per spin', full.select(BettingSystem.create('straight', [11])) === 'full' && full.committed().length === 10);
 
-  // settlement of several bets on one number
   const both = [{ bet: odd, stake: 100000 }, { bet: red, stake: 50000 }];
   check('Odd + Red, 7 (odd, red): both pay', BettingSystem.roundReturn(both, 7) === 300000);
   check('Odd + Red, 9 (odd, red): both pay', BettingSystem.roundReturn(both, 9) === 300000);
@@ -81,7 +77,7 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   check('outlook: best return / payout chance', o.bestReturn === 300000 && Math.abs(o.payoutProbability - 26 / 37) < 1e-12, JSON.stringify(o));
 }
 
-// ---------------------------------------------------------------- money
+// money
 {
   const m = new MoneyManager(RULES.initialBalance);
   check('canAfford rejects 0 / negative / above balance / fractions',
@@ -93,7 +89,7 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   check('cannot deduct more than the balance', threw && m.balance === 1000000);
 }
 
-// ---------------------------------------------------------------- payouts
+// payouts
 {
   const red = BettingSystem.evenMoney('red');
   check('red covers 18', red.numbers.length === 18 && red.payout === 1);
@@ -109,7 +105,7 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   check('red is correct', eq(red.numbers, [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]));
 }
 
-// ---------------------------------------------------------------- table hit detection
+// table hit detection
 {
   const canvas = document.createElement('canvas');
   const t = new BettingTable({}, canvas);
@@ -147,7 +143,6 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   check('outside the felt → null', hit(5, 5) === null && hit(gx0 + 3 * W, dozenY1 + T.outsideH + 30) === null);
   const c1 = hit(gx0 + 2, gy0 + 1.5 * H);
   check('probability = covered / 37', Math.abs(c1.probability - 2 / 37) < 1e-12);
-  // clicks are reported to the owner (pointer mapping stubbed to fixed logical points)
   const clicked = [];
   t.onZoneClick = (b) => clicked.push(b.key);
   t._toLogical = () => ({ x: gx0 + W / 2, y: gy0 + H / 2 });
@@ -159,7 +154,7 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   t.destroy();
 }
 
-// ---------------------------------------------------------------- state machine
+// state machine
 {
   const g = new GameState();
   check('starts in MENU', g.is(S.MENU));
@@ -182,7 +177,7 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   check('READY → RETIRED → READY (play again)', g.transition(S.RETIRED) && g.transition(S.READY));
 }
 
-// ---------------------------------------------------------------- stress
+// stress
 {
   const straight = BettingSystem.create('straight', [7]);
   const red = BettingSystem.evenMoney('red');
@@ -200,7 +195,7 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   check('thresholds 0-19 / 20-39 / 40-59 / 60-79 / 80-100', [0, 19.4, 20, 39, 40, 59.4, 60, 79.4, 80, 100].map(StressMeter.levelOf).join('') === '0011223344');
 }
 
-// ---------------------------------------------------------------- stats
+// stats
 {
   const s = new SessionStats(1000);
   s.record(1, 100, 0);
@@ -212,7 +207,7 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   check('stats count individual bets of a multi-bet spin', s.spins === 3 && s.wins === 2 && s.losses === 2);
 }
 
-// ---------------------------------------------------------------- TuLlave card (async)
+// TuLlave card (async)
 async function cardTests() {
   const pStub = { loadImage() {}, millis: () => performance.now() };
   const card = new TuLlaveCard(pStub);

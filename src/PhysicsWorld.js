@@ -2,13 +2,6 @@ import { PHYSICS } from './config.js';
 
 const { Engine, Composite, Events } = window.Matter;
 
-/**
- * Owns the single Matter.js engine of a session and advances it with a fixed
- * time step (accumulator pattern), independent of the rendering frame rate.
- *
- * The world is top-down, so Matter's gravity is disabled; the bowl slope is
- * modelled by forces applied in RouletteBall.applyForces().
- */
 export default class PhysicsWorld {
   constructor() {
     this.engine = Engine.create({
@@ -24,7 +17,6 @@ export default class PhysicsWorld {
     this.destroyed = false;
 
     this._onCollisionStart = (event) => {
-      // Copy the pairs: Matter reuses the array between updates.
       const pairs = event.pairs.slice();
       for (const fn of this.collisionListeners) {
         try {
@@ -45,22 +37,18 @@ export default class PhysicsWorld {
     Composite.remove(this.world, bodyOrConstraint);
   }
 
-  /** fn(dtSeconds) runs before every fixed sub-step. Returns an unsubscribe function. */
   onStep(fn) {
     this.stepListeners.add(fn);
     return () => this.stepListeners.delete(fn);
   }
 
-  /** fn(pairs) runs on Matter's collisionStart. Returns an unsubscribe function. */
   onCollision(fn) {
     this.collisionListeners.add(fn);
     return () => this.collisionListeners.delete(fn);
   }
 
-  /** Advance the simulation by a real-time delta (ms). */
   update(deltaMs) {
     if (this.destroyed) return;
-    // Clamp long frames (tab switch, breakpoint) so the world never "explodes".
     this.accumulator += Math.min(deltaMs, 100);
     let steps = 0;
     const dt = PHYSICS.stepMs;
@@ -73,7 +61,6 @@ export default class PhysicsWorld {
     if (steps === PHYSICS.maxStepsPerFrame) this.accumulator = 0;
   }
 
-  /** Release every body, constraint and event listener of this engine. */
   destroy() {
     if (this.destroyed) return;
     this.destroyed = true;

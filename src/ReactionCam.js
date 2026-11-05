@@ -4,17 +4,13 @@ import { clamp, smoothing } from './utils/math.js';
 
 const FALLBACK_EMOJI = ['😌', '🤔', '😟', '😰', '😱'];
 const CHAT = [
-  ['tranqui, es solo una ruletica', 'gg ez', 'buena vibra hoy'],
+  ['tranqui, es solo una ruletica', 'gg ez', 'buenas vibras pa hoy'],
   ['¿y si sale?', 'uy uy uy', 'esa bolita...'],
   ['F en el chat', 'piensa en el arriendo', 'respira, parcero'],
-  ['¡¡suéltalo!!', 'se nos va el mercado', 'MODS ayúdenlo'],
-  ['NOOOO TODO EN UNA', '😱😱😱', 'llamen a la mamá']
+  ['sueltelo!!', 'se nos va el mercado', 'MODS ayúdenlo'],
+  ['NOOOO TODO EN UNA', '😱😱😱', 'noo paila']
 ];
 
-/**
- * Simulated streamer face-cam built from five preloaded images
- * (assets/reactions/*.png). Missing images fall back to a styled emoji card.
- */
 export default class ReactionCam {
   constructor(p, basePath = 'assets/reactions/') {
     this.p = p;
@@ -67,7 +63,6 @@ export default class ReactionCam {
   update(dt) {
     this.fade = Math.min(1, this.fade + dt / 0.3);
     this.zoom += (1 - this.zoom) * smoothing(6, dt);
-    // Viewer count drifts up with the drama.
     if (Math.random() < dt * 2) this.viewers += Math.floor((Math.random() - 0.35) * (6 + this.level * 18));
     this.viewers = Math.max(800, this.viewers);
   }
@@ -78,14 +73,12 @@ export default class ReactionCam {
     const img = this.images[key];
     if (img) {
       p.tint(255, 255 * alpha);
-      // cover-fit the 4:3 image
       const s = Math.max(w / img.width, h / img.height);
       const iw = img.width * s;
       const ih = img.height * s;
       p.image(img, x + (w - iw) / 2, y + (h - ih) / 2, iw, ih);
       p.noTint();
     } else {
-      // Styled fallback (image missing or still loading)
       p.noStroke();
       p.fill(30, 22, 60, 255 * alpha);
       p.rect(x, y, w, h);
@@ -106,7 +99,6 @@ export default class ReactionCam {
     const C = LAYOUT.cam;
     const ctx = p.drawingContext;
 
-    // Shake intensity by level (subtle; only at the two highest levels).
     const amp = this.level >= 4 ? 2.6 : this.level === 3 ? 1.1 : 0;
     const t = p.millis() / 50;
     const sx = amp ? (p.noise(t) - 0.5) * 2 * amp : 0;
@@ -133,7 +125,6 @@ export default class ReactionCam {
     this._drawFrame(this.level, this.fade, x, y, w, h);
     p.pop();
 
-    // Overlays: LIVE badge, viewers, handle, chat line
     p.noStroke();
     p.fill(220, 38, 38);
     p.rect(C.x + 10, C.y + 10, 46, 18, 4);

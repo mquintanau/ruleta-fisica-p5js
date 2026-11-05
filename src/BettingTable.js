@@ -66,8 +66,6 @@ export default class BettingTable {
     if (!on) this.hover = null;
   }
 
-  // ------------------------------------------------------------ geometry
-
   _buildOutsideBets() {
     const { gx0, gy1, dozenY1 } = this.g;
     this.outside = [];
@@ -191,8 +189,6 @@ export default class BettingTable {
     return null;
   }
 
-  // ------------------------------------------------------------ input
-
   _toLogical(e) {
     const rect = this.canvasEl.getBoundingClientRect();
     return {
@@ -220,8 +216,6 @@ export default class BettingTable {
     const bet = this.hitTest(x, y);
     if (bet && this.onZoneClick) this.onZoneClick(bet);
   }
-
-  // ------------------------------------------------------------ drawing
 
   /**
    * @param entries  list of { bet, stake } to show as chips

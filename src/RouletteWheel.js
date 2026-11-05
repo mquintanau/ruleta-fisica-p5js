@@ -5,27 +5,17 @@ import { TAU, normAngle, randRange } from './utils/math.js';
 const { Bodies, Body } = window.Matter;
 
 const POCKET_ANGLE = TAU / POCKETS;
-// Pocket i is centred at rotor-local angle BASE + i * POCKET_ANGLE (0 starts at 12 o'clock).
 const BASE = -Math.PI / 2;
 
 const COLOR_HEX = { red: COLORS.red, black: COLORS.black, green: COLORS.green };
 
-/**
- * The wheel: a static stator (rim wall + brass diamonds) and a kinematic rotor
- * (pocket frets + central hub) that Matter.js collides against the ball.
- *
- * The rotor is a static compound body driven kinematically: every sub-step it
- * is rotated with Body.setAngle(..., updateVelocity = true), which also stores
- * its angular velocity so contacts with the frets transfer the rotor's surface
- * velocity to the ball, while the rotor itself is never pushed by the ball.
- */
 export default class RouletteWheel {
   constructor(p, physics, cx, cy) {
     this.p = p;
     this.physics = physics;
     this.cx = cx;
     this.cy = cy;
-    this.omega = WHEEL.idleOmega; // rad/s, positive = clockwise on screen
+    this.omega = WHEEL.idleOmega;
     this.highlightIndex = -1;
 
     this._buildStator();
@@ -41,8 +31,6 @@ export default class RouletteWheel {
   _buildStator() {
     const { rimR, rimSegments, diamonds, diamondR } = WHEEL;
     const thickness = 34;
-    // The ball rides a smooth circular wall at rimR (see RouletteBall); these
-    // Matter segments sit 3 px further out as a collision backstop.
     const segR = rimR + 3 + thickness / 2;
     const segLen = (TAU * segR) / rimSegments * 1.12;
     this.statorBodies = [];
@@ -62,7 +50,6 @@ export default class RouletteWheel {
       const d = Bodies.fromVertices(x, y, [[
         { x: 0, y: -9 }, { x: 4, y: 0 }, { x: 0, y: 9 }, { x: -4, y: 0 }
       ]], { isStatic: true, restitution: 0.55, friction: 0.02, label: 'diamond' });
-      // Long axis along the radius (radial) or along the track (tangential).
       Body.setAngle(d, radial ? a + Math.PI / 2 : a);
       Body.setPosition(d, { x, y });
       this.statorBodies.push(d);
@@ -96,19 +83,16 @@ export default class RouletteWheel {
   }
 
   _step(dt) {
-    // Rotor speed decays toward a slow idle spin, like a real wheel.
     if (this.omega > WHEEL.idleOmega) {
       this.omega = Math.max(WHEEL.idleOmega, this.omega * Math.exp(-WHEEL.rotorDecay * dt));
     }
     const delta = this.omega * dt;
     Body.setAngle(this.rotor, this.rotor.angle + delta, true);
-    // Static bodies are skipped by Engine.update, so set the per-step velocity
-    // explicitly: the contact solver uses it as the moving wall's velocity.
+
     this.rotor.angularVelocity = delta;
     this.rotor.anglePrev = this.rotor.angle - delta;
   }
 
-  /** Croupier spin: give the rotor a fresh clockwise impulse. */
   spin() {
     this.omega = randRange(WHEEL.spinOmega[0], WHEEL.spinOmega[1]);
   }
@@ -117,12 +101,10 @@ export default class RouletteWheel {
     return this.rotor.angle;
   }
 
-  /** Velocity (px/s) of the rotor surface at world point (x, y). */
   surfaceVelocity(x, y) {
     return { x: -this.omega * (y - this.cy), y: this.omega * (x - this.cx) };
   }
 
-  /** Pocket index (0..36, index into WHEEL_ORDER) under world point (x, y). */
   pocketIndexAt(x, y) {
     const local = Math.atan2(y - this.cy, x - this.cx) - this.rotor.angle - BASE;
     return Math.round(normAngle(local) / POCKET_ANGLE) % POCKETS;
@@ -132,7 +114,6 @@ export default class RouletteWheel {
     return WHEEL_ORDER[this.pocketIndexAt(x, y)];
   }
 
-  /** World position of the resting spot at the bottom of pocket `index`. */
   pocketRestPoint(index) {
     const a = this.rotor.angle + BASE + index * POCKET_ANGLE;
     const r = WHEEL.hubR + BALL.radius + 1;
@@ -172,7 +153,7 @@ export default class RouletteWheel {
     const { outerR, rimR, bowlInnerR, diamondR } = WHEEL;
     g.clear();
     g.noStroke();
-    // Drop shadow
+
     g.fill(0, 0, 0, 90);
     g.circle(c + 3, c + 6, outerR * 2 + 10);
     // Wooden rim
@@ -188,7 +169,7 @@ export default class RouletteWheel {
     g.stroke(COLORS.goldDark);
     g.strokeWeight(1.5);
     g.circle(c, c, rimR * 2 + 1);
-    // Ball track / bowl
+
     g.noStroke();
     for (let r = rimR; r > bowlInnerR - 2; r -= 1) {
       const t = (rimR - r) / (rimR - bowlInnerR);
@@ -228,7 +209,7 @@ export default class RouletteWheel {
       g.noStroke();
       g.fill(col);
       g.arc(c, c, numberOuterR * 2, numberOuterR * 2, a0, a1, g.PIE);
-      // pocket (slightly darker)
+
       const pc = g.color(col);
       pc.setAlpha(255);
       g.fill(g.lerpColor(pc, g.color(0), 0.35));
@@ -243,7 +224,7 @@ export default class RouletteWheel {
       g.text(n, 0, 0);
       g.pop();
     }
-    // separators on the number band and the frets (gold)
+
     for (let i = 0; i < POCKETS; i++) {
       const a = BASE + (i + 0.5) * POCKET_ANGLE;
       g.stroke(COLORS.gold);
@@ -260,7 +241,7 @@ export default class RouletteWheel {
     g.strokeWeight(2);
     g.circle(c, c, pocketOuterR * 2);
     g.circle(c, c, numberOuterR * 2 - 1);
-    // Hub / cone
+
     g.noStroke();
     for (let r = hubR; r > 0; r -= 1) {
       const t = 1 - r / hubR;
@@ -272,7 +253,7 @@ export default class RouletteWheel {
     g.noFill();
     g.circle(c, c, hubR * 2);
     g.circle(c, c, hubR * 1.1);
-    // Turret
+
     g.strokeWeight(6);
     g.stroke(COLORS.goldDark);
     for (let k = 0; k < 4; k++) {

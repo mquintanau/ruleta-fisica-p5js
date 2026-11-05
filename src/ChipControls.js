@@ -1,9 +1,5 @@
 import { RULES } from './config.js';
 
-/**
- * Stake buttons: +10.000 +50.000 +100.000 +500.000 ½ Clear All in.
- * They only report the action; Game applies it to the active bet zone.
- */
 export default class ChipControls {
   constructor(container, onAction) {
     this.container = container;

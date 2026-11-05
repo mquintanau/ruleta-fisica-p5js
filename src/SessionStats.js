@@ -1,4 +1,3 @@
-/** Per-session counters, updated exactly once per resolved spin. */
 export default class SessionStats {
   constructor(initialBalance) {
     this.initialBalance = initialBalance;
@@ -15,10 +14,6 @@ export default class SessionStats {
     this.resolvedRounds = new Set();
   }
 
-  /**
-   * Records one resolved spin. `betsWon` / `betsLost` count individual bets
-   * (a spin can carry several). Returns false if the round was already recorded.
-   */
   record(roundId, stake, returned, betsWon = returned > 0 ? 1 : 0, betsLost = returned > 0 ? 0 : 1) {
     if (this.resolvedRounds.has(roundId)) return false;
     this.resolvedRounds.add(roundId);

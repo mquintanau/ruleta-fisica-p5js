@@ -8,11 +8,6 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
 const $ = (id) => document.getElementById(id);
 
-/**
- * DOM side of the interface: balance, bet info, stake, the three action
- * buttons, result card, history and the menu / retired / game-over overlays.
- * It never changes game data; it renders snapshots and forwards clicks.
- */
 export default class UIManager {
   constructor(handlers) {
     this.handlers = handlers;
@@ -77,13 +72,10 @@ export default class UIManager {
     clearTimeout(this.toastTimer);
   }
 
-  // ---------------------------------------------------------------- render
-
   render(v) {
     const S = STATES;
     const e = this.el;
 
-    // Balance (+ a short pulse when it changes)
     e.balance.textContent = formatCOP(v.balance);
     if (this._lastBalance !== null && this._lastBalance !== v.balance) {
       e.balance.classList.remove('pulse-up', 'pulse-down');
@@ -95,7 +87,6 @@ export default class UIManager {
     e.sessionNet.textContent = `Session ${formatSignedCOP(net)}`;
     e.sessionNet.className = `net ${net > 0 ? 'pos' : net < 0 ? 'neg' : ''}`;
 
-    // Active zone (the one the chip buttons act on)
     const active = v.bets.find((b) => b.bet.key === v.activeKey) || null;
     if (active) {
       const bet = active.bet;
@@ -111,7 +102,6 @@ export default class UIManager {
       e.stake.textContent = '—';
     }
 
-    // Bet list and round totals
     this._renderBetList(v.bets, v.activeKey, v.editable);
     const placed = v.bets.filter((b) => b.stake > 0);
     const outlook = BetSlip.outlook(placed);
@@ -122,7 +112,6 @@ export default class UIManager {
     e.payoutProb.textContent = placed.length ? formatPercent(outlook.payoutProbability) : '—';
     e.totalStake.className = outlook.total > v.balance && v.editable ? 'neg' : '';
 
-    // Buttons
     const ready = v.state === S.READY;
     const placeOk = ready && placed.length > 0 && Number.isInteger(outlook.total) && outlook.total <= v.balance;
     e.btnPlace.disabled = !placeOk;
@@ -133,7 +122,6 @@ export default class UIManager {
     e.btnSpin.classList.toggle('glow', v.state === S.BET_PLACED && v.spinUnlocked);
     e.btnSpin.classList.toggle('waiting', v.state === S.BET_PLACED && !v.spinUnlocked);
 
-    // Status hint
     let status = '';
     let cls = '';
     switch (v.state) {
@@ -218,8 +206,6 @@ export default class UIManager {
       ? history.map((n, i) => `<span class="pill ${colorOf(n)} ${i === 0 ? 'latest' : ''}">${n}</span>`).join('')
       : '<span class="muted small">—</span>';
   }
-
-  // -------------------------------------------------------------- overlays
 
   toast(msg) {
     const t = this.el.toast;

@@ -10,13 +10,6 @@ export const STRESS_LEVELS = [
   { key: 'extreme_nervous', label: 'Extreme nervousness', min: 80, color: '#ef4444' }
 ];
 
-/**
- * Fictional "cortisol" gauge (a game heuristic, not a medical measurement).
- *   R = S / B          (share of the pre-bet balance at risk; S = total stake)
- *   L = P(round loses)  (single bet: 1 − n / 37; several bets: share of the
- *                        37 numbers on which the payout is below S)
- *   stress = 100 · (0.65 R + 0.35 L), clamped to [0, 100]
- */
 export default class StressMeter {
   constructor(p) {
     this.p = p;
@@ -33,7 +26,6 @@ export default class StressMeter {
     return clamp(100 * (0.65 * R + 0.35 * lossProbability), 0, 100);
   }
 
-  /** Level of a score, using the same rounding as the number shown on the dial. */
   static levelOf(value) {
     const v = Math.round(value);
     let idx = 0;
@@ -106,7 +98,7 @@ export default class StressMeter {
       p.text(k, cx + Math.cos(a) * (R - 32), cy + Math.sin(a) * (R - 32) + (k === 50 ? 0 : -4));
     }
 
-    // Needle (with a little tremor at high stress)
+    // Needle
     const jitter = v > 60 ? (p.noise(p.millis() / 60) - 0.5) * (v - 60) * 0.004 : 0;
     const a = Math.PI + (clamp(v, 0, 100) / 100) * Math.PI + jitter;
     const col = this._colorFor(v);

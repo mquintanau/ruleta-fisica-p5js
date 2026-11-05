@@ -1,6 +1,5 @@
 import { RED_NUMBERS, POCKETS } from './utils/rouletteData.js';
 
-/** Bet catalogue: European payouts (profit : stake). */
 const TYPES = {
   straight: { payout: 35, title: 'Straight up'},
   split: { payout: 17, title: 'Split'},
@@ -21,10 +20,6 @@ const TYPES = {
 
 const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 
-/**
- * Pure betting rules: builds bet descriptors and settles them.
- * Geometry (where a bet sits on the felt) is attached by BettingTable.
- */
 export default class BettingSystem {
   static get types() {
     return TYPES;
@@ -70,14 +65,12 @@ export default class BettingSystem {
     }
   }
 
-  // Outside bet factories --------------------------------------------------
   static dozen(i) {
     const b = BettingSystem.create('dozen', range(i * 12 + 1, i * 12 + 12));
     b.name = `${['1st', '2nd', '3rd'][i]} dozen (Docena)`;
     return b;
   }
 
-  /** col 0 holds 1,4,…,34; col 2 holds 3,6,…,36. */
   static column(col) {
     const nums = range(0, 11).map((k) => k * 3 + col + 1);
     const b = BettingSystem.create('column', nums);
@@ -98,18 +91,14 @@ export default class BettingSystem {
     return BettingSystem.create(kind, all.filter(filters[kind]));
   }
 
-  // Settlement -------------------------------------------------------------
   static wins(bet, number) {
-    // Zero is never part of an outside bet, so it loses all of them.
     return bet.numbers.includes(number);
   }
 
-  /** Total returned to the player (stake + profit) — 0 on a loss. */
   static totalReturn(bet, stake, number) {
     return BettingSystem.wins(bet, number) ? stake * (bet.payout + 1) : 0;
   }
 
-  /** Sum returned by a list of { bet, stake } entries when `number` comes up. */
   static roundReturn(entries, number) {
     return entries.reduce((sum, e) => sum + BettingSystem.totalReturn(e.bet, e.stake, number), 0);
   }

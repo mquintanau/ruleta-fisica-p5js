@@ -3,21 +3,6 @@ import { randRange, TAU } from './utils/math.js';
 
 const { Bodies, Body, Constraint, Vector } = window.Matter;
 
-/**
- * The ball: a Matter.js circle body.
- *
- * States
- *   held     – resting in a pocket, pinned to the rotor by a Matter constraint
- *   rolling  – free physics simulation (launched by spin())
- *
- * Top-down force model (applied every fixed sub-step, before Engine.update):
- *   - inward "slope" acceleration toward the wheel centre (stronger on the
- *     tilted bowl than over the rotor), standing in for gravity on a 3D bowl;
- *   - rolling resistance on the stationary bowl (absolute velocity);
- *   - pocket-floor friction over the rotor (velocity relative to the rotor).
- * The rim wall, brass diamonds, frets and hub are real Matter.js collision
- * geometry, so all bounces and the final pocket come from the simulation.
- */
 export default class RouletteBall {
   constructor(p, physics, wheel) {
     this.p = p;
@@ -29,11 +14,11 @@ export default class RouletteBall {
       restitution: 0.1,
       friction: 0.04,
       frictionStatic: 0.05,
-      frictionAir: 0, // drag is modelled explicitly in _applyForces
+      frictionAir: 0,
       density: 0.004,
       slop: 0.02
     });
-    // Keep Matter's time-correction factor at 1 with our fixed step.
+
     this.body.deltaTime = PHYSICS.stepMs;
     physics.add(this.body);
 
@@ -53,8 +38,6 @@ export default class RouletteBall {
 
     this.holdInPocket(0);
   }
-
-  // ------------------------------------------------------------- helpers
 
   _velocity(dt) {
     const b = this.body;
@@ -83,9 +66,6 @@ export default class RouletteBall {
     }
   }
 
-  // --------------------------------------------------------------- control
-
-  /** Pin the ball at the bottom of pocket `index` (idle / initial position). */
   holdInPocket(index) {
     const pt = this.wheel.pocketRestPoint(index);
     this._place(pt.x, pt.y);
@@ -111,14 +91,12 @@ export default class RouletteBall {
     this.trail = [];
   }
 
-  /** The croupier throws the ball along the rim, opposite to the rotor. */
   launch(onSettled) {
     this._releaseConstraint();
     const a = randRange(0, TAU);
     const r = WHEEL.rimR - BALL.radius - 0.5;
     this._place(this.wheel.cx + Math.cos(a) * r, this.wheel.cy + Math.sin(a) * r);
     const speed = randRange(BALL.launchSpeed[0], BALL.launchSpeed[1]);
-    // Counter-clockwise tangent on a y-down screen.
     this._setVelocity(Math.sin(a) * speed, -Math.cos(a) * speed);
     this.state = 'rolling';
     this.elapsed = 0;
@@ -130,11 +108,8 @@ export default class RouletteBall {
     this.onSettled = onSettled;
   }
 
-  // ------------------------------------------------------------ simulation
-
   _step(dt) {
     if (this.state === 'held') {
-      // Static bodies do not rotate constraint anchors, so follow the rotor here.
       if (this.constraint) {
         this.constraint.pointA = Vector.rotate(this.localOffset, this.wheel.rotor.angle - this.attachAngle);
       }
@@ -150,7 +125,6 @@ export default class RouletteBall {
     let dy = b.position.y - cy;
     let r = Math.hypot(dx, dy);
 
-    // --- safety nets: invalid state, escaped the rim, or tunnelled into the hub
     if (!Number.isFinite(r) || r > WHEEL.rimR + 20) {
       this._recover();
       return;
@@ -163,9 +137,6 @@ export default class RouletteBall {
 
     let v = this._velocity(dt);
 
-    // --- smooth rim: a polygonal wall bleeds energy at every joint, so the
-    // track wall is a circular contact constraint (Matter segments behind it
-    // remain as a backstop). Outward radial velocity is removed, tangential kept.
     const maxR = WHEEL.rimR - BALL.radius;
     if (r > maxR) {
       const nx0 = dx / r;
@@ -208,7 +179,6 @@ export default class RouletteBall {
       ay = -BALL.rotorGravity * ny - BALL.floorDrag * (v.y - surf.y);
     }
 
-    // --- controlled fallback: only if the simulation refuses to settle
     if (this.elapsed > BALL.guideAfter) {
       if (this.guideIndex < 0) {
         this.guideIndex = this.wheel.pocketIndexAt(b.position.x, b.position.y);
@@ -219,10 +189,9 @@ export default class RouletteBall {
       ay += 60 * (t.y - b.position.y) - 8 * (v.y - surf.y);
     }
 
-    const m = b.mass * 1e-6; // Matter: Δv(px/step) = F/m · Δt(ms)²
+    const m = b.mass * 1e-6;
     Body.applyForce(b, b.position, { x: ax * m, y: ay * m });
 
-    // --- settling: inside a pocket and moving with the rotor for a while
     const relSpeed = Math.hypot(v.x - surf.x, v.y - surf.y);
     const inPocket = r < WHEEL.pocketOuterR - 3;
     const threshold = this.guideIndex >= 0 ? BALL.settleSpeed * 3 : BALL.settleSpeed;
@@ -232,7 +201,6 @@ export default class RouletteBall {
     if (this.stillTime >= BALL.settleTime) {
       this._settle();
     } else if (this.elapsed > BALL.snapAfter) {
-      // Last resort (never expected in practice): drop into the guided pocket.
       const idx = this.guideIndex >= 0 ? this.guideIndex : this.wheel.pocketIndexAt(b.position.x, b.position.y);
       const pt = this.wheel.pocketRestPoint(idx);
       this._place(pt.x, pt.y);
@@ -242,7 +210,6 @@ export default class RouletteBall {
   }
 
   _recover() {
-    // Put the ball back on the track with a gentle tangential speed.
     this.recoveries++;
     const a = randRange(0, TAU);
     const r = WHEEL.rimR - BALL.radius - 1;
@@ -282,8 +249,6 @@ export default class RouletteBall {
     this.physics.remove(this.body);
     this.onSettled = null;
   }
-
-  // ------------------------------------------------------------- rendering
 
   draw() {
     const p = this.p;

@@ -6,13 +6,11 @@ export const lerp = (a, b, t) => a + (b - a) * t;
 
 export const randRange = (lo, hi) => lo + Math.random() * (hi - lo);
 
-/** Normalise an angle to [0, 2π). */
 export function normAngle(a) {
   const r = a % TAU;
   return r < 0 ? r + TAU : r;
 }
 
-/** Frame-rate independent exponential smoothing factor. */
 export const smoothing = (rate, dt) => 1 - Math.exp(-rate * dt);
 
 export const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -23,7 +21,6 @@ export const easeOutBack = (t) => {
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 };
 
-/** Rounded panel used by every canvas section. */
 export function drawPanel(p, x, y, w, h, title) {
   p.push();
   p.noStroke();

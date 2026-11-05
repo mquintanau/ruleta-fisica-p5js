@@ -5,15 +5,9 @@ import { formatCOP } from './utils/format.js';
 const DURATION = 0.9; // seconds
 const CARD_W = 196;
 const CARD_H = 122;
-// Region of the reference photo that contains the card itself.
+
 const CROP = { x: 26, y: 12, w: 800, h: 472 };
 
-/**
- * TuLlave "tap to pay" animation. play() is called only by a successful
- * Place bet. The completion callback fires exactly once per play, either when
- * the animation ends or from the failsafe timeout, and is ignored if the
- * animation was cancelled or restarted in the meantime (token check).
- */
 export default class TuLlaveCard {
   constructor(p, imagePath = 'assets/card/tullave.png') {
     this.p = p;
@@ -26,8 +20,8 @@ export default class TuLlaveCard {
     this.onDone = null;
     this.status = 'idle'; // idle | processing | ready | closed
     this.approvedAt = -1e9;
-    this.amount = 0;      // stake shown on the terminal while paying
-    this.plays = 0;       // debug/testing counter
+    this.amount = 0;
+    this.plays = 0;
 
     const P = LAYOUT.card;
     this.rest = { x: P.x + 40 + CARD_W / 2, y: P.y + 52 + CARD_H / 2 };
@@ -184,7 +178,7 @@ export default class TuLlaveCard {
       p.circle(T.x + T.w / 2 - 20 + i * 20, T.y + T.h - 18, 8);
     });
 
-    // ---- ripple / flash on contact
+    // ---- flash on contact
     if (since < 700) {
       const k = since / 700;
       p.noFill();
@@ -220,7 +214,7 @@ export default class TuLlaveCard {
     this._drawCard(CARD_W, CARD_H);
     p.pop();
 
-    // ---- amount being paid
+    // ---- amount
     if (this.amount > 0 && (this.status === 'processing' || this.status === 'ready')) {
       const mx = (this.rest.x + CARD_W / 2 + T.x) / 2;
       p.noStroke();
