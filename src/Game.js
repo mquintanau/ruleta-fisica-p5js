@@ -467,7 +467,7 @@ export default class Game {
     const W = LAYOUT.wheel.panel;
     const { cx, cy } = LAYOUT.wheel;
     const ballPhase = this.launch.phase === 'ball';
-    const pulse = 0.55 + 0.45 * Math.sin(p.millis() / 220);
+    const pulse = 0.55 + 0.45 * Math.sin(p.millis() / 80);
     p.push();
 
     // Countdown ring around the wheel + seconds left
@@ -478,7 +478,7 @@ export default class Game {
       p.strokeWeight(5);
       p.stroke(255, 255, 255, 25);
       p.circle(cx, cy, WHEEL.outerR * 2 + 2);
-      p.stroke(urgent ? p.color(248, 113, 113, 120 + 135 * pulse) : p.color('#fcd34d'));
+      p.stroke(urgent ? p.color(239, 68, 68, 120 + 135 * pulse) : p.color('#fcd34d'));
       p.arc(cx, cy, WHEEL.outerR * 2 + 2, WHEEL.outerR * 2 + 2, -Math.PI / 2, -Math.PI / 2 + TAU * frac);
       p.noStroke();
       p.fill(urgent ? '#f87171' : '#fcd34d');
@@ -492,23 +492,35 @@ export default class Game {
     // Direction hint (arrow + label), hidden while dragging
     const g = this.gesture;
     if (!g.dragging) {
-      p.noStroke();
-      p.fill(255, 224, 138, 255 * pulse);
-      p.textAlign(p.RIGHT, p.TOP);
+      const hintText = ballPhase ? 'DRAG LEFT TO LAUNCH THE BALL' : 'DRAG DOWN TO SPIN THE WHEEL';
+      const hintX = W.x + W.w - 14;
+      const hintY = W.y + 12;
+
       p.textStyle(p.BOLD);
       p.textSize(13);
-      p.text(ballPhase ? '← DRAG LEFT TO LAUNCH THE BALL' : 'DRAG DOWN TO SPIN THE WHEEL ↓', W.x + W.w - 14, W.y + 12);
+
+      // Semi-transparent black background behind the label
+      const padX = 8, padY = 5;
+      const tw = p.textWidth(hintText);
+      p.noStroke();
+      p.fill(0, 0, 0, 200);
+      p.rect(hintX - tw - padX, hintY - padY, tw + padX * 2, 13 + padY * 2, 4);
+
+      p.noStroke();
+      p.fill(255, 224, 138);
+      p.textAlign(p.RIGHT, p.TOP);
+      p.text(hintText, hintX, hintY);
       p.textStyle(p.NORMAL);
-      p.stroke(255, 224, 138, 200 * pulse);
+      p.stroke(255, 224, 138);
       p.strokeWeight(4);
       const off = (p.millis() / 12) % 40;
       if (ballPhase) {
-        const y = cy - WHEEL.rimR + 6;
+        const y = cy - WHEEL.rimR + 20;
         p.line(cx + 50 - off, y, cx - 10 - off, y);
         p.line(cx - 10 - off, y, cx + 2 - off, y - 9);
         p.line(cx - 10 - off, y, cx + 2 - off, y + 9);
       } else {
-        const x = cx + WHEEL.outerR - 2;
+        const x = cx + WHEEL.outerR - 36;
         p.line(x, cy - 50 + off, x, cy + 10 + off);
         p.line(x, cy + 10 + off, x - 9, cy - 2 + off);
         p.line(x, cy + 10 + off, x + 9, cy - 2 + off);

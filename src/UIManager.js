@@ -235,7 +235,7 @@ export default class UIManager {
       <ul class="how">
         <li>Pick a zone and add chips to it. Pick more zones to bet on several at once (e.g. Odd and Red).</li>
         <li><b>Place bet</b> pays for all your bets with your TuLlave.</li>
-        <li>When the payment is approved, <b>drag down</b> on the wheel to spin it, then <b>drag left</b> within ${LAUNCH.ballWindowMs / 1000} s to launch the ball. Faster, longer drags are stronger.</li>
+        <li>When the payment is approved, <b>drag down</b> on the wheel to spin it, then <b>drag left</b> within ${LAUNCH.ballWindowMs / 1000}s to launch the ball. Faster and longer drags are stronger.</li>
         <li>Miss the ball window and you lose ${Math.round(LAUNCH.timeoutPenalty * 100)}% of your bet. Cash out any time between rounds.</li>
       </ul>
       <div class="start-balance">Starting balance <b>${formatCOP(RULES.initialBalance)}</b></div>
