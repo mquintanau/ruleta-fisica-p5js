@@ -44,9 +44,19 @@ Tests (served the same way):
      of your balance on the selected zone.
    - The list shows the total stake, the best-case return and the chance that at least one bet pays.
 5. **Place bet**: the total of all bets is deducted once and the bets are locked. The TuLlave card
-   taps the terminal (≈0.9 s). While it plays, **Spin** is locked ("Processing payment…"), and you
+   taps the terminal (≈0.9 s). While it plays, the wheel is locked ("Processing payment…"), and you
    cannot retire or get a refund.
-6. **Spin**: the rotor is spun and the ball is launched along the rim. When it settles, every bet is
+6. **Spin with the mouse** (on the wheel panel):
+   - **Drag down** to spin the wheel. A longer and, above all, faster drag spins it harder
+     (strength = 35 % drag distance + 65 % release velocity). If the wheel ends up below
+     1.4 rad/s you are asked to try again. The SPIN POWER bar shows the live strength and the minimum.
+   - Once the wheel is fast enough, the ball unlocks for **3 s** (countdown ring around the wheel).
+     The wheel slows down noticeably during the countdown. **Drag left** to throw the ball; a throw
+     below 2600 px/s is refused and you can retry while time remains.
+   - If the timer runs out, the round is voided: **19 % of the bet is deducted** (the rest goes back
+     to your balance) and you must place a new bet.
+
+   When the ball settles, every bet is
    settled on the same number. The result card lists each bet (✓/✗, stake → payout), then the total
    stake, total payout, net profit/loss and new balance. The next round starts by itself after ~2.8 s
    with an empty bet list.
@@ -97,6 +107,7 @@ One class per file (`src/`). Free functions and constants live in `src/utils/` a
 | `StressMeter.js` | Stress formula and gauge |
 | `ReactionCam.js` | Face cam: 5 images, crossfade, zoom, shake, overlays, fallback |
 | `TuLlaveCard.js` | Card and terminal animation, completion callback, failsafe |
+| `LaunchGesture.js` | Mouse drag on the wheel panel → launch strength (distance + release velocity) |
 | `UIManager.js` | DOM: balance, history, bet info, buttons, result card, overlays, toasts |
 
 ### State management
@@ -107,10 +118,13 @@ READY → RETIRED            RETIRED / GAME_OVER → READY (Play again) | MENU (
 ```
 
 - `MENU` is an addition to the specified states (the title screen and the "Main menu" option).
-- There is no `BET_PLACED → RETIRED` or `BET_PLACED → READY` transition, so a placed bet must be spun.
+- There is no `BET_PLACED → RETIRED` transition, so a placed bet must be spun. `BET_PLACED → READY`
+  is used only when the ball window expires (stake refunded minus the 19 % penalty).
 - `canSpin()` is true only in `BET_PLACED` with `spinUnlocked`. `unlockSpin()` succeeds once per round.
+  Inside `BET_PLACED`, `Game.launch.phase` tracks the mouse launch (`'wheel'` → `'ball'`).
+  `LaunchGesture.js` turns a drag into a strength in [0, 1]; tuning lives in `LAUNCH` in `config.js`.
 - The card callback carries the round id and session id, so a stale callback from an earlier round
-  or session is ignored. The failsafe timeout (1.6 s) unlocks Spin even if frames stop or the image
+  or session is ignored. The failsafe timeout (1.6 s) unlocks the wheel even if frames stop or the image
   fails to load.
 - Results are applied once (`round.resolved`, plus `SessionStats` keyed by round id). Game over is
   only evaluated after a result, so an All-in bet (balance temporarily 0) never ends the game early.
@@ -187,4 +201,4 @@ after a win, and Extreme on game over.
 - The rim is a smooth constraint rather than Matter collision geometry, for the energy reason above.
 - No sound.
 - If the tab is hidden, the browser pauses `requestAnimationFrame`, so the spin pauses with it. The
-  card failsafe still unlocks Spin by timer.
+  card failsafe still unlocks the wheel by timer. The 3 s ball window is counted in game frames, so it pauses too.

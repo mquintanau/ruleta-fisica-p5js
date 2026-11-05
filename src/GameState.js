@@ -19,7 +19,8 @@ const S = STATES;
 const TRANSITIONS = {
   [S.MENU]: [S.READY],
   [S.READY]: [S.BET_PLACED, S.RETIRED],
-  [S.BET_PLACED]: [S.SPINNING], // no way out except spinning: no refunds, no retiring
+  // No retiring and no refunds; READY is only the ball-launch timeout (stake minus a penalty).
+  [S.BET_PLACED]: [S.SPINNING, S.READY],
   [S.SPINNING]: [S.RESULT],
   [S.RESULT]: [S.READY, S.GAME_OVER, S.RETIRED],
   [S.RETIRED]: [S.READY, S.MENU],
@@ -58,7 +59,7 @@ export default class GameState {
     return true;
   }
 
-  /** Spin is only possible in BET_PLACED after the card animation unlocked it. */
+  /** The mouse launch is only possible in BET_PLACED after the card animation unlocked it. */
   canSpin() {
     return this.state === S.BET_PLACED && this.spinUnlocked;
   }

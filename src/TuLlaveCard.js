@@ -238,8 +238,8 @@ export default class TuLlaveCard {
     // ---- status line
     const status = {
       idle: { text: 'Place a bet to pay with TuLlave', color: COLORS.muted },
-      processing: { text: 'Processing payment…  Spin is locked', color: '#fcd34d' },
-      ready: { text: 'Payment approved — ready to spin', color: '#4ade80' },
+      processing: { text: 'Processing payment…  wheel is locked', color: '#fcd34d' },
+      ready: { text: 'Payment approved — drag the wheel to spin', color: '#4ade80' },
       closed: { text: 'Bets closed', color: COLORS.muted }
     }[this.status];
     p.noStroke();

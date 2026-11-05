@@ -26,6 +26,7 @@ export default class RouletteWheel {
     this.cx = cx;
     this.cy = cy;
     this.omega = WHEEL.idleOmega; // rad/s, positive = clockwise on screen
+    this.decay = WHEEL.rotorDecay; // 1/s, raised while the ball launch window is open
     this.highlightIndex = -1;
 
     this._buildStator();
@@ -98,7 +99,7 @@ export default class RouletteWheel {
   _step(dt) {
     // Rotor speed decays toward a slow idle spin, like a real wheel.
     if (this.omega > WHEEL.idleOmega) {
-      this.omega = Math.max(WHEEL.idleOmega, this.omega * Math.exp(-WHEEL.rotorDecay * dt));
+      this.omega = Math.max(WHEEL.idleOmega, this.omega * Math.exp(-this.decay * dt));
     }
     const delta = this.omega * dt;
     Body.setAngle(this.rotor, this.rotor.angle + delta, true);
@@ -108,9 +109,9 @@ export default class RouletteWheel {
     this.rotor.anglePrev = this.rotor.angle - delta;
   }
 
-  /** Croupier spin: give the rotor a fresh clockwise impulse. */
-  spin() {
-    this.omega = randRange(WHEEL.spinOmega[0], WHEEL.spinOmega[1]);
+  /** Give the rotor a fresh clockwise impulse (random croupier spin if omega is omitted). */
+  spin(omega = randRange(WHEEL.spinOmega[0], WHEEL.spinOmega[1])) {
+    this.omega = Math.max(WHEEL.idleOmega, omega);
   }
 
   get angle() {

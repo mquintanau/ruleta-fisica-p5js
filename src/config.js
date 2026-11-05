@@ -55,6 +55,22 @@ export const BALL = {
   snapAfter: 30               // s: hard fallback (never expected)
 };
 
+// Mouse launch: drag down on the wheel to spin it, then drag left to throw the ball.
+export const LAUNCH = {
+  minDistance: 24,            // px: shorter drags are ignored as clicks
+  distanceRef: 220,           // px of drag that counts as full distance
+  velocityRef: 2200,          // px/s release speed that counts as a full flick
+  distanceWeight: 0.35,       // strength = 0.35·distance + 0.65·velocity (both 0..1)
+  velocityWindowMs: 90,       // release velocity is measured over this window
+  wheelOmega: [0.5, 2.6],     // rad/s given to the rotor at strength 0..1
+  minWheelOmega: 1.4,         // rad/s needed to unlock the ball
+  ballSpeed: [1400, 3400],    // px/s given to the ball at strength 0..1
+  minBallSpeed: 2600,         // px/s: weaker throws are refused
+  ballWindowMs: 3000,         // time to throw the ball once the wheel is fast enough
+  countdownDecay: 0.3,        // 1/s rotor decay while the ball window is open
+  timeoutPenalty: 0.19        // share of the stake lost when the window expires
+};
+
 export const PHYSICS = {
   stepMs: 1000 / 180,   // fixed sub-step
   maxStepsPerFrame: 12,
