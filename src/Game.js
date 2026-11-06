@@ -175,14 +175,11 @@ export default class Game {
     }
   }
 
-  // ------------------------------------------------------------ mouse launch
-
-  /** A drag on the wheel panel was released (see LaunchGesture.evaluate). */
   _onGesture(g) {
     if (!this.state.canSpin() || !this.launch) return;
     const phase = this.launch.phase;
     if (!g.onAxis) {
-      if (Math.hypot(g.end.x - g.start.x, g.end.y - g.start.y) >= 8) { // not a plain click
+      if (Math.hypot(g.end.x - g.start.x, g.end.y - g.start.y) >= 8) {
         this.ui.toast(phase === 'wheel' ? 'Drag DOWN on the wheel to spin it.' : 'Drag LEFT to launch the ball.');
       }
       return;
@@ -443,7 +440,6 @@ export default class Game {
     const pulse = 0.55 + 0.45 * Math.sin(p.millis() / 80);
     p.push();
 
-    // Countdown ring around the wheel + seconds left
     if (ballPhase) {
       const frac = clamp(this.launch.remainingMs / LAUNCH.ballWindowMs, 0, 1);
       const urgent = frac < 0.34;
@@ -462,7 +458,6 @@ export default class Game {
       p.textStyle(p.NORMAL);
     }
 
-    // Direction hint (arrow + label), hidden while dragging
     const g = this.gesture;
     if (!g.dragging) {
       const hintText = ballPhase ? 'DRAG LEFT TO LAUNCH THE BALL' : 'DRAG DOWN TO SPIN THE WHEEL';
@@ -472,7 +467,6 @@ export default class Game {
       p.textStyle(p.BOLD);
       p.textSize(13);
 
-      // Semi-transparent black background behind the label
       const padX = 8, padY = 5;
       const tw = p.textWidth(hintText);
       p.noStroke();
@@ -500,7 +494,6 @@ export default class Game {
       }
     }
 
-    // Live drag: rubber band + power meter with the minimum marked
     const live = g.preview;
     if (live) {
       p.stroke(255, 255, 255, 140);
