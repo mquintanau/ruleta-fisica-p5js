@@ -8,7 +8,8 @@ import GameState, { STATES as S } from '../src/GameState.js';
 import StressMeter from '../src/StressMeter.js';
 import TuLlaveCard from '../src/TuLlaveCard.js';
 import { formatCOP, formatSignedCOP } from '../src/utils/format.js';
-import { LAYOUT, RULES } from '../src/config.js';
+import { LAYOUT, RULES, LAUNCH } from '../src/config.js';
+import LaunchGesture, { DIRECTIONS } from '../src/LaunchGesture.js';
 
 const out = document.getElementById('out');
 let pass = 0;
@@ -164,7 +165,7 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   g.transition(S.BET_PLACED);
   check('BET_PLACED starts locked', !g.spinUnlocked && !g.canSpin());
   check('BET_PLACED ↛ RETIRED', !g.transition(S.RETIRED) && g.is(S.BET_PLACED));
-  check('BET_PLACED ↛ READY (no refund path)', !g.transition(S.READY));
+  check('BET_PLACED → READY only as the launch-timeout path', g.canTransition(S.READY));
   check('retire request refused in BET_PLACED', !g.canRequestRetire());
   check('unlockSpin works once', g.unlockSpin() && !g.unlockSpin() && g.canSpin());
   g.transition(S.SPINNING);
@@ -205,6 +206,34 @@ check('formatSignedCOP', formatSignedCOP(10000) === '+COP $10.000' && formatSign
   check('stats count each round once', sum.spins === 2 && sum.losses === 1 && sum.wins === 1 && sum.totalWagered === 200 && sum.totalReturned === 3600 && sum.net === 3400);
   s.record(3, 150, 200, 1, 1);
   check('stats count individual bets of a multi-bet spin', s.spins === 3 && s.wins === 2 && s.losses === 2);
+}
+
+// mouse launch
+{
+  // drag of `dist` px along `dir` over `ms`, sampled every 16 ms
+  const drag = (dx, dy, ms) => {
+    const n = Math.max(2, Math.round(ms / 16));
+    return Array.from({ length: n + 1 }, (_, i) => ({ x: 100 + (dx * i) / n, y: 100 + (dy * i) / n, t: (ms * i) / n }));
+  };
+  const flick = LaunchGesture.evaluate(drag(0, 200, 100), DIRECTIONS.down);
+  const slow = LaunchGesture.evaluate(drag(0, 200, 1500), DIRECTIONS.down);
+  check('launch: fast flick is stronger than a slow pull of the same length', flick.strength > slow.strength, `${flick.strength} vs ${slow.strength}`);
+  const longer = LaunchGesture.evaluate(drag(0, 300, 150), DIRECTIONS.down);
+  const shorter = LaunchGesture.evaluate(drag(0, 100, 50), DIRECTIONS.down);
+  check('launch: longer drag at the same speed is stronger', longer.strength > shorter.strength);
+  check('launch: wrong direction gives no strength', LaunchGesture.evaluate(drag(0, -200, 100), DIRECTIONS.down).strength === 0
+    && LaunchGesture.evaluate(drag(200, 0, 100), DIRECTIONS.left).strength === 0);
+  check('launch: diagonal drag counts only if mostly on axis', LaunchGesture.evaluate(drag(-150, 60, 100), DIRECTIONS.left).onAxis
+    && !LaunchGesture.evaluate(drag(-60, 150, 100), DIRECTIONS.left).onAxis);
+  check('launch: tiny drag is ignored', !LaunchGesture.evaluate(drag(0, LAUNCH.minDistance - 2, 30), DIRECTIONS.down).onAxis);
+  check('launch: strength is within [0, 1]', LaunchGesture.strengthOf(1e6, 1e6) === 1 && LaunchGesture.strengthOf(0, 0) === 0);
+  const omega = (g) => LAUNCH.wheelOmega[0] + (LAUNCH.wheelOmega[1] - LAUNCH.wheelOmega[0]) * g.strength;
+  check('launch: a quick flick spins the wheel fast enough, a slow pull does not', omega(flick) >= LAUNCH.minWheelOmega && omega(slow) < LAUNCH.minWheelOmega,
+    `${omega(flick).toFixed(2)} / ${omega(slow).toFixed(2)}`);
+
+  const st = new SessionStats(1000);
+  check('penalty recorded once per round', st.recordPenalty(7, 19) && !st.recordPenalty(7, 19) && st.summary(981).penaltyTotal === 19 && st.spins === 0);
+  check('penalty is 19% of the stake', Math.round(100000 * LAUNCH.timeoutPenalty) === 19000);
 }
 
 // TuLlave card (async)

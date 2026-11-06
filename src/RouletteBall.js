@@ -91,12 +91,11 @@ export default class RouletteBall {
     this.trail = [];
   }
 
-  launch(onSettled) {
+  launch(onSettled, speed = randRange(BALL.launchSpeed[0], BALL.launchSpeed[1])) {
     this._releaseConstraint();
     const a = randRange(0, TAU);
     const r = WHEEL.rimR - BALL.radius - 0.5;
     this._place(this.wheel.cx + Math.cos(a) * r, this.wheel.cy + Math.sin(a) * r);
-    const speed = randRange(BALL.launchSpeed[0], BALL.launchSpeed[1]);
     this._setVelocity(Math.sin(a) * speed, -Math.cos(a) * speed);
     this.state = 'rolling';
     this.elapsed = 0;

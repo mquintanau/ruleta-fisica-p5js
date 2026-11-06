@@ -11,6 +11,8 @@ export default class SessionStats {
     this.totalWagered = 0;
     this.totalReturned = 0;
     this.biggestWin = 0;
+    this.penalties = 0;
+    this.penaltyTotal = 0;
     this.resolvedRounds = new Set();
   }
 
@@ -26,6 +28,15 @@ export default class SessionStats {
     return true;
   }
 
+  /** A round voided because the ball was not launched in time. */
+  recordPenalty(roundId, amount) {
+    if (this.resolvedRounds.has(roundId)) return false;
+    this.resolvedRounds.add(roundId);
+    this.penalties++;
+    this.penaltyTotal += amount;
+    return true;
+  }
+
   summary(currentBalance) {
     return {
       initialBalance: this.initialBalance,
@@ -36,7 +47,9 @@ export default class SessionStats {
       totalWagered: this.totalWagered,
       totalReturned: this.totalReturned,
       net: currentBalance - this.initialBalance,
-      biggestWin: this.biggestWin
+      biggestWin: this.biggestWin,
+      penalties: this.penalties,
+      penaltyTotal: this.penaltyTotal
     };
   }
 }

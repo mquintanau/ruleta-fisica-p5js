@@ -16,6 +16,7 @@ export default class RouletteWheel {
     this.cx = cx;
     this.cy = cy;
     this.omega = WHEEL.idleOmega;
+    this.decay = WHEEL.rotorDecay;
     this.highlightIndex = -1;
 
     this._buildStator();
@@ -84,7 +85,7 @@ export default class RouletteWheel {
 
   _step(dt) {
     if (this.omega > WHEEL.idleOmega) {
-      this.omega = Math.max(WHEEL.idleOmega, this.omega * Math.exp(-WHEEL.rotorDecay * dt));
+      this.omega = Math.max(WHEEL.idleOmega, this.omega * Math.exp(-this.decay * dt));
     }
     const delta = this.omega * dt;
     Body.setAngle(this.rotor, this.rotor.angle + delta, true);
@@ -93,8 +94,8 @@ export default class RouletteWheel {
     this.rotor.anglePrev = this.rotor.angle - delta;
   }
 
-  spin() {
-    this.omega = randRange(WHEEL.spinOmega[0], WHEEL.spinOmega[1]);
+  spin(omega = randRange(WHEEL.spinOmega[0], WHEEL.spinOmega[1])) {
+    this.omega = Math.max(WHEEL.idleOmega, omega);
   }
 
   get angle() {

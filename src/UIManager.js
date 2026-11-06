@@ -1,7 +1,7 @@
 import { STATES } from './GameState.js';
 import { formatCOP, formatSignedCOP, formatPercent } from './utils/format.js';
 import { colorOf, colorLabel } from './utils/rouletteData.js';
-import { RULES } from './config.js';
+import { RULES, LAUNCH } from './config.js';
 import BetSlip from './BetSlip.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -26,7 +26,6 @@ export default class UIManager {
       bestReturn: $('bestReturn'),
       payoutProb: $('payoutProb'),
       btnPlace: $('btnPlace'),
-      btnSpin: $('btnSpin'),
       btnRetire: $('btnRetire'),
       status: $('status'),
       resultBody: $('resultBody'),
@@ -39,7 +38,6 @@ export default class UIManager {
     this._lastBalance = null;
 
     this._onPlace = () => handlers.onPlace();
-    this._onSpin = () => handlers.onSpin();
     this._onRetire = () => handlers.onRetire();
     this._onClearBets = () => handlers.onClearBets();
     this._onBetList = (e) => {
@@ -55,7 +53,6 @@ export default class UIManager {
       if (fn) fn();
     };
     this.el.btnPlace.addEventListener('click', this._onPlace);
-    this.el.btnSpin.addEventListener('click', this._onSpin);
     this.el.btnRetire.addEventListener('click', this._onRetire);
     this.el.btnClearBets.addEventListener('click', this._onClearBets);
     this.el.betList.addEventListener('click', this._onBetList);
@@ -64,7 +61,6 @@ export default class UIManager {
 
   destroy() {
     this.el.btnPlace.removeEventListener('click', this._onPlace);
-    this.el.btnSpin.removeEventListener('click', this._onSpin);
     this.el.btnRetire.removeEventListener('click', this._onRetire);
     this.el.btnClearBets.removeEventListener('click', this._onClearBets);
     this.el.betList.removeEventListener('click', this._onBetList);
@@ -115,12 +111,9 @@ export default class UIManager {
     const ready = v.state === S.READY;
     const placeOk = ready && placed.length > 0 && Number.isInteger(outlook.total) && outlook.total <= v.balance;
     e.btnPlace.disabled = !placeOk;
-    e.btnSpin.disabled = !(v.state === S.BET_PLACED && v.spinUnlocked);
     const retireOk = ready || ((v.state === S.SPINNING || v.state === S.RESULT) && !v.retirePending);
     e.btnRetire.disabled = !retireOk;
     e.btnRetire.textContent = v.retirePending ? 'Cash-out pending…' : 'Retire / Cash out';
-    e.btnSpin.classList.toggle('glow', v.state === S.BET_PLACED && v.spinUnlocked);
-    e.btnSpin.classList.toggle('waiting', v.state === S.BET_PLACED && !v.spinUnlocked);
 
     let status = '';
     let cls = '';
@@ -132,7 +125,9 @@ export default class UIManager {
         else status = 'Add another zone, or press Place bet to confirm all bets.';
         break;
       case S.BET_PLACED:
-        status = v.spinUnlocked ? 'Ready to spin.' : 'Processing payment… Spin is locked.';
+        if (!v.spinUnlocked) status = 'Processing payment… the wheel is locked.';
+        else if (v.launchPhase === 'ball') status = `Drag LEFT on the wheel to launch the ball — hurry, or lose ${Math.round(LAUNCH.timeoutPenalty * 100)}% of your bet!`;
+        else status = 'Drag DOWN on the wheel to spin it.';
         cls = v.spinUnlocked ? 'ok' : 'wait';
         break;
       case S.SPINNING:
@@ -226,7 +221,8 @@ export default class UIManager {
       <ul class="how">
         <li>Pick a zone and add chips to it. Pick more zones to bet on several at once (e.g. Odd and Red).</li>
         <li><b>Place bet</b> pays for all your bets with your TuLlave.</li>
-        <li><b>Spin</b> unlocks when the payment is approved. Cash out any time between rounds.</li>
+        <li>When the payment is approved, <b>drag down</b> on the wheel to spin it, then <b>drag left</b> within ${LAUNCH.ballWindowMs / 1000}s to launch the ball. Faster and longer drags are stronger.</li>
+        <li>Miss the ball window and you lose ${Math.round(LAUNCH.timeoutPenalty * 100)}% of your bet. Cash out any time between rounds.</li>
       </ul>
       <div class="start-balance">Starting balance <b>${formatCOP(RULES.initialBalance)}</b></div>
       <button class="btn btn-spin big" data-action="start">Start session</button>`;
@@ -245,6 +241,7 @@ export default class UIManager {
       ['Winning / losing bets', `${s.wins} / ${s.losses}`],
       ['Total wagered', formatCOP(s.totalWagered)],
       ['Total returned', formatCOP(s.totalReturned)],
+      ['Timeout penalties', s.penalties ? `${s.penalties} · ${formatCOP(s.penaltyTotal)}` : '0'],
       ['Net change', `<span class="${s.net >= 0 ? 'pos' : 'neg'}">${formatSignedCOP(s.net)}</span>`]
     ];
     this.el.modal.innerHTML = `
